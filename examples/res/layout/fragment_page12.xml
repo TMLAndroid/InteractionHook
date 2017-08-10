@@ -34,7 +34,7 @@
         android:background="@color/partBackground"
         android:orientation="horizontal">
 
-        <com.rexy.example.extend.FadeTextButton
+        <com.rexy.example.widget.FadeTextButton
             android:background="@color/optionBackground"
             android:id="@+id/button1"
             android:layout_width="0dp"
@@ -46,7 +46,7 @@
             android:text="button1"
             android:textColor="@color/select_tab_item_text"/>
 
-        <com.rexy.example.extend.FadeTextButton
+        <com.rexy.example.widget.FadeTextButton
             android:background="@color/optionBackground"
             android:id="@+id/button2"
             android:layout_width="0dp"

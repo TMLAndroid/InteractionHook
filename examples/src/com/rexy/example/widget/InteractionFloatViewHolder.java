@@ -1,4 +1,4 @@
-package com.rexy.example.extend;
+package com.rexy.example.widget;
 
 import android.app.Activity;
 import android.content.Context;
@@ -13,6 +13,7 @@ import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import com.rexy.example.extend.ViewUtils;
 import com.rexy.hook.interfaces.IHandleResult;
 import com.rexy.interactionhook.example.R;
 

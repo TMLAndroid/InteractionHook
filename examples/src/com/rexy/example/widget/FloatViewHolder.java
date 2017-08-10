@@ -1,4 +1,4 @@
-package com.rexy.example.extend;
+package com.rexy.example.widget;
 
 import android.os.Build;
 import android.view.Gravity;
@@ -98,7 +98,7 @@ public abstract class FloatViewHolder {
         }
     }
 
-    protected void updateViewWidth(int x, int y) {
+    public void updateViewWidth(int x, int y) {
         if (mRootView != null && mWindowManager != null && wmParams != null) {
             boolean changed = false;
             if (x != 0 && wmParams.width != x) {

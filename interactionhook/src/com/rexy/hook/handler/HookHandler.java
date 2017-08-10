@@ -15,7 +15,7 @@ import com.rexy.hook.interfaces.IHookHandler;
  * @author: rexy
  * @date: 2017-08-02 13:46
  */
-abstract class HookHandler implements IHookHandler {
+public abstract class HookHandler implements IHookHandler {
     /**
      * whether this handler is enable
      */
@@ -29,7 +29,7 @@ abstract class HookHandler implements IHookHandler {
     /**
      * a callback use to subscribe for handle result and any error happened while deal with task
      */
-    private IHandleListener mHandleListener;
+    protected IHandleListener mHandleListener;
 
     public HookHandler(String tag) {
         mTag = tag;

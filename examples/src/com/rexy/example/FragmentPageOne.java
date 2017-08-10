@@ -18,7 +18,7 @@ import com.rexy.interactionhook.example.R;
  * @author: rexy
  * @date: 2017-08-07 17:52
  */
-public class FragmentPage1 extends BaseFragment implements View.OnClickListener {
+public class FragmentPageOne extends BaseFragment implements View.OnClickListener {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View root=inflater.inflate(R.layout.fragment_page12,container,false);

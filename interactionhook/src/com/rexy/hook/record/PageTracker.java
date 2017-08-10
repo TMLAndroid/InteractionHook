@@ -4,10 +4,11 @@ import android.app.Activity;
 import android.util.Log;
 import android.view.View;
 
+import com.rexy.hook.InteractionHook;
 import com.rexy.hook.handler.HandleResult;
+import com.rexy.hook.handler.HookHandler;
 import com.rexy.hook.interfaces.IHandleListener;
 
-import java.lang.ref.WeakReference;
 import java.util.Map;
 
 /**
@@ -16,7 +17,7 @@ import java.util.Map;
  * @author: rexy
  * @date: 2017-08-09 15:52
  */
-public class PageTracker {
+public class PageTracker extends HookHandler {
     /**
      * current activity that is resumed.
      */
@@ -29,21 +30,21 @@ public class PageTracker {
      * Activity record include Fragment record inner.
      */
     PageActivityRecord mRecords;
-    /**
-     * listener for a PageResult after analyze the record change .
-     */
-    IHandleListener mListener;
+
+    public PageTracker(String tag) {
+        super(tag);
+    }
 
     public static void testPrint(CharSequence msg) {
         Log.d("rexy_page", msg.toString());
     }
 
     public void setHandleListener(IHandleListener listener) {
-        mListener = listener;
+        mHandleListener = listener;
     }
 
     public void onResume(Activity activity, Object fragment, Object parentFragment) {
-        record(activity, fragment, parentFragment, PageOption.OPTION_RESUME);
+        record(activity, fragment, parentFragment, PageOperate.OPERATE_RESUME);
         if (fragment == null) {
             setCurrentActivity(activity);
         } else {
@@ -52,18 +53,18 @@ public class PageTracker {
     }
 
     public void onPause(Activity activity, Object fragment, Object parentFragment) {
-        record(activity, fragment, parentFragment, PageOption.OPTION_PAUSE);
+        record(activity, fragment, parentFragment, PageOperate.OPERATE_PAUSE);
     }
 
     public void onHiddenChanged(Activity activity, Object fragment, Object parentFragment, boolean hidden) {
-        record(activity, fragment, parentFragment, hidden ? PageOption.OPTION_HIDE : PageOption.OPTION_SHOW);
+        record(activity, fragment, parentFragment, hidden ? PageOperate.OPERATE_HIDE : PageOperate.OPERATE_SHOW);
         if (!hidden) {
             setCurrentFragment(fragment);
         }
     }
 
     public void onDestroy(Activity activity, Object fragment, Object parentFragment) {
-        record(activity, fragment, parentFragment, PageOption.OPTION_DESTROY);
+        record(activity, fragment, parentFragment, PageOperate.OPERATE_DESTROY);
     }
 
     private PageActivityRecord findActivityRecord(Activity activity) {
@@ -73,6 +74,20 @@ public class PageTracker {
                 return peek;
             } else {
                 peek = peek.mNext;
+            }
+        }
+        return null;
+    }
+
+    private PageActivityRecord findPreviousActivityRecord(PageActivityRecord record) {
+        if (!(mRecords == record || mRecords == null)) {
+            PageActivityRecord peek = mRecords;
+            while (peek.mNext != null) {
+                if (peek.mNext == record) {
+                    return peek;
+                } else {
+                    peek = peek.mNext;
+                }
             }
         }
         return null;
@@ -93,7 +108,18 @@ public class PageTracker {
                 activityRecord = new PageActivityRecord(activity, mRecords);
                 mRecords = activityRecord;
             }
-            activityRecord.record(optionCode);
+            if (optionCode == PageOperate.OPERATE_DESTROY) {
+                //change link and destroy target activity record.
+                PageActivityRecord parent = findPreviousActivityRecord(activityRecord);
+                if (parent == null) {
+                    mRecords = activityRecord.mNext;
+                } else {
+                    parent.mNext = activityRecord.mNext;
+                }
+                activityRecord.destroy();
+            } else {
+                activityRecord.record(optionCode);
+            }
         } else {
             if (activityRecord != null) {
                 activityRecord.record(fragment, parentFragment, optionCode);
@@ -102,101 +128,91 @@ public class PageTracker {
     }
 
     private void setCurrentActivity(Activity activity) {
-        mCurrentActivity = activity;
+        if (mCurrentActivity != activity) {
+            mCurrentActivity = activity;
+        }
+        testPrint(dumpRecord(new StringBuilder()).toString());
     }
 
     private void setCurrentFragment(Object fragment) {
-        mCurrentFragment = fragment;
-    }
-
-    public static class PageFragmentRecord {
-        WeakReference mFragment;
-        PageOption mOptions;
-        PageFragmentRecord mNext;
-        PageFragmentRecord mChild;
-
-        PageFragmentRecord(Object fragment, PageFragmentRecord next) {
-            mFragment = new WeakReference(fragment);
-            mNext = next;
-        }
-
-        void record(int optionCode) {
-            mOptions = PageOption.obtain(optionCode, mOptions);
+        if (mCurrentFragment != fragment) {
+            mCurrentFragment = fragment;
+            testPrint(dumpRecord(new StringBuilder()).toString());
         }
     }
 
-    public static class PageActivityRecord {
-        WeakReference<Activity> mActivityRef;
-        PageOption mOptions;
-        PageFragmentRecord mFragmentRecords;
-        PageActivityRecord mNext;
-
-        PageActivityRecord(Activity activity, PageActivityRecord next) {
-            mActivityRef = new WeakReference(activity);
-            mNext = next;
+    public StringBuilder dumpRecord(StringBuilder sb) {
+        sb = sb == null ? new StringBuilder() : sb;
+        PageActivityRecord peekActivity = mRecords;
+        while (peekActivity != null) {
+            dumpRecordActivity(peekActivity, sb);
+            peekActivity = peekActivity.mNext;
         }
+        return sb.append("\n\n");
+    }
 
-        PageFragmentRecord findFragmentRecordNoRecursive(Object fragment, PageFragmentRecord fromRecord) {
-            PageFragmentRecord recorder = fromRecord;
-            while (recorder != null) {
-                if (recorder.mFragment != null && recorder.mFragment.get() == fragment) {
-                    return recorder;
-                } else {
-                    recorder = recorder.mNext;
-                }
+    void dumpRecordActivity(PageActivityRecord target, StringBuilder sb) {
+        Activity activity = target.mActivityRef == null ? null : target.mActivityRef.get();
+        if (activity != null) {
+            sb.append(mCurrentActivity == activity ? "*" : " ");
+            sb.append(activity.getClass().getSimpleName());
+            sb.append('@').append(activity.hashCode());
+            if (target.mOperaters != null) {
+                dumpRecordOption(target.mOperaters, sb);
             }
-            return null;
+            sb.append('\n');
         }
-
-        PageFragmentRecord findFragmentRecordRecursive(Object fragment, PageFragmentRecord fromRecord) {
-            PageFragmentRecord find = null;
-            if (fromRecord != null) {
-                if (fromRecord.mFragment != null && fromRecord.mFragment.get() == fragment) {
-                    find = fromRecord;
-                } else {
-                    if (fromRecord.mNext != null) {
-                        find = findFragmentRecordRecursive(fragment, fromRecord.mNext);
-                    }
-                    if (fromRecord.mChild != null && find == null) {
-                        find = findFragmentRecordRecursive(fragment, fromRecord.mChild);
-                    }
-                }
-            }
-            return find;
-        }
-
-        void record(int optionCode) {
-            mOptions = PageOption.obtain(optionCode, mOptions);
-        }
-
-        void record(Object fragment, Object parentFragment, int optionCode) {
-            PageFragmentRecord fragmentRecord = null;
-            if (mFragmentRecords == null) {
-                fragmentRecord = new PageFragmentRecord(fragment, mFragmentRecords);
-                mFragmentRecords = fragmentRecord;
-            } else {
-                if (parentFragment == null) {
-                    fragmentRecord = findFragmentRecordNoRecursive(fragment, mFragmentRecords);
-                    if (fragmentRecord == null) {
-                        fragmentRecord = new PageFragmentRecord(fragment, mFragmentRecords);
-                        mFragmentRecords = fragmentRecord;
-                    }
-                } else {
-                    PageFragmentRecord parentRecord = findFragmentRecordRecursive(parentFragment, mFragmentRecords);
-                    if (parentRecord != null) {
-                        fragmentRecord = findFragmentRecordNoRecursive(fragment, parentRecord);
-                        if (fragmentRecord == null) {
-                            fragmentRecord = new PageFragmentRecord(fragment, parentRecord.mChild);
-                            parentRecord.mChild = fragmentRecord;
-                        }
-                    }
-                }
-            }
-            if (fragmentRecord != null) {
-                fragmentRecord.record(optionCode);
-            }
+        if (target.mFragmentRecords != null) {
+            dumpRecordFragmentRecursive(target.mFragmentRecords, sb, "   ");
         }
     }
+
+    void dumpRecordFragmentRecursive(PageFragmentRecord target, StringBuilder sb, String space) {
+        dumpRecordFragment(target, sb, space);
+    }
+
+    void dumpRecordFragment(PageFragmentRecord target, StringBuilder sb, String space) {
+        Object fragment = target.mFragment == null ? null : target.mFragment.get();
+        if (fragment != null) {
+            sb.append(space);
+            sb.append(fragment == mCurrentFragment ? "*" : " ");
+            sb.append(fragment.getClass().getSimpleName());
+            sb.append('@').append(fragment.hashCode());
+            if (target.mOperaters != null) {
+                dumpRecordOption(target.mOperaters, sb);
+            }
+            sb.append('\n');
+        }
+        if (target.mChild != null) {
+            dumpRecordFragmentRecursive(target.mChild, sb, space + "    ");
+        }
+        if (target.mNext != null) {
+            dumpRecordFragmentRecursive(target.mNext, sb, space);
+        }
+    }
+
+    void dumpRecordOption(PageOperate target, StringBuilder sb) {
+        int beforeLength = sb.length();
+        PageOperate peek = target;
+        while (peek != null) {
+            sb.append(peek.getOptionName()).append('(');
+            sb.append(peek.mTimestamp).append(',').append(peek.mDeltaTime);
+            sb.append(')').append(" < ");
+            peek = peek.mNext;
+        }
+        int afterLength = sb.length();
+        if (afterLength > beforeLength) {
+            sb.delete(afterLength - 3, afterLength);
+            sb.insert(beforeLength, " => { ");
+            sb.insert(sb.length(), " }");
+        }
+    }
+
+    @Override
+    public boolean handle(InteractionHook caller) {
+        return false;
+    }
+
 
     public static class ResultPage extends HandleResult {
 

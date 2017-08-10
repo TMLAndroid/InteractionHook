@@ -1,6 +1,7 @@
 package com.rexy.hook;
 
 import android.app.Activity;
+import android.os.Build;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
@@ -401,6 +402,9 @@ public class InteractionHook implements IHandleListener {
      */
     public static void setGlobalHandleListener(IHandleListener l) {
         sHandlerListener = l;
+        if(sPageTracker!=null){
+            sPageTracker.setHandleListener(l);
+        }
     }
 
 
@@ -408,15 +412,14 @@ public class InteractionHook implements IHandleListener {
 
     private static PageTracker getPageTracker() {
         if (sPageTracker == null) {
-            sPageTracker = new PageTracker();
+            sPageTracker = new PageTracker("page");
+            sPageTracker.setHandleListener(sHandlerListener);
         }
-        sPageTracker.setHandleListener(sHandlerListener);
         return sPageTracker;
     }
 
     public static void onResume(Activity activity) {
         getPageTracker().onResume(activity, null, null);
-
     }
 
     public static void onPause(Activity activity) {
@@ -443,19 +446,26 @@ public class InteractionHook implements IHandleListener {
         getPageTracker().onDestroy(fragment.getActivity(), fragment, fragment.getParentFragment());
     }
 
+    private static Object getParentFragment(android.app.Fragment fragment){
+        if(Build.VERSION.SDK_INT>=17){
+            return fragment.getParentFragment();
+        }
+        return null;
+    }
+
     public static void onResume(android.app.Fragment fragment) {
-        getPageTracker().onResume(fragment.getActivity(), fragment, fragment.getParentFragment());
+        getPageTracker().onResume(fragment.getActivity(), fragment, getParentFragment(fragment));
     }
 
     public static void onPause(android.app.Fragment fragment) {
-        getPageTracker().onPause(fragment.getActivity(), fragment, fragment.getParentFragment());
+        getPageTracker().onPause(fragment.getActivity(), fragment, getParentFragment(fragment));
     }
 
     public static void onHiddenChanged(android.app.Fragment fragment, boolean hidden) {
-        getPageTracker().onHiddenChanged(fragment.getActivity(), fragment, fragment.getParentFragment(), hidden);
+        getPageTracker().onHiddenChanged(fragment.getActivity(), fragment, getParentFragment(fragment), hidden);
     }
 
     public static void onDestroy(android.app.Fragment fragment) {
-        getPageTracker().onDestroy(fragment.getActivity(), fragment, fragment.getParentFragment());
+        getPageTracker().onDestroy(fragment.getActivity(), fragment, getParentFragment(fragment));
     }
 }

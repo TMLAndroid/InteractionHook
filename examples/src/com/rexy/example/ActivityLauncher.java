@@ -13,7 +13,7 @@ import com.rexy.example.extend.BaseActivity;
  * @author: rexy
  * @date: 2016-11-03 15:38
  */
-public class ActivityLauncher extends Activity {
+public class ActivityLauncher extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

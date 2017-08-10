@@ -1,9 +1,11 @@
-package com.rexy.example.extend;
+package com.rexy.example.widget;
 
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.Transformation;
+
+import com.rexy.example.extend.ViewUtils;
 
 
 public class ExpandCollapseAnimation extends Animation {

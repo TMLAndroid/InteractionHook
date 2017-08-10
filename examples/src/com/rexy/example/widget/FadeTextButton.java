@@ -1,4 +1,4 @@
-package com.rexy.example.extend;
+package com.rexy.example.widget;
 
 import android.content.Context;
 import android.graphics.Canvas;

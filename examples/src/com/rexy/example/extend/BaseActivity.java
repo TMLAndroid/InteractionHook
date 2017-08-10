@@ -14,19 +14,20 @@ import android.view.MotionEvent;
 import android.view.Window;
 import android.widget.Toast;
 
+import com.rexy.example.widget.InteractionFloatViewHolder;
 import com.rexy.hook.InteractionHook;
 import com.rexy.hook.interfaces.IHandleListener;
 import com.rexy.hook.interfaces.IHandleResult;
 import com.rexy.hook.interfaces.IHookHandler;
 
 /**
- * TODO:功能说明
- *
  * @author: rexy
  * @date: 2017-06-05 14:45
  */
 public class BaseActivity extends FragmentActivity implements IHandleListener {
     private InteractionHook mInteractionHook;
+    //真正使用不是让 BaseActivity 去监听IHandleListener，设置个全局的监听就可以。
+    //本例是为了在弹出浮层上适时显示监听结果。
     protected InteractionFloatViewHolder mInteractionViewHolder;
 
     @Override
