@@ -8,22 +8,21 @@ import java.lang.ref.WeakReference;
  * @author: rexy
  * @date: 2017-08-10 13:45
  */
-public class PageFragmentRecord extends PageRecord {
-    PageFragmentRecord mNext;
+public class PageFragmentRecord extends PageRecord<PageFragmentRecord,Object> {
+
     PageFragmentRecord mChild;
-    WeakReference mFragment;
 
     PageFragmentRecord(Object fragment, PageFragmentRecord next) {
-        mFragment = new WeakReference(fragment);
+        mRecorder = new WeakReference(fragment);
         mNext = next;
     }
 
     @Override
     void destroy() {
         super.destroy();
-        if (mFragment != null) {
-            mFragment.clear();
-            mFragment = null;
+        if (mRecorder != null) {
+            mRecorder.clear();
+            mRecorder = null;
         }
         mNext = null;
         if (mChild != null) {
@@ -31,7 +30,7 @@ public class PageFragmentRecord extends PageRecord {
         }
     }
 
-    void destroyAll() {
+    void  destroyAll() {
         if (mNext != null) {
             mNext.destroyAll();
         }

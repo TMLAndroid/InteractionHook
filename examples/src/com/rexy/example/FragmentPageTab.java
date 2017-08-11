@@ -18,15 +18,18 @@ import com.rexy.interactionhook.example.R;
  * @author: rexy
  * @date: 2017-08-07 17:52
  */
-public class FragmentPage2 extends BaseFragment implements View.OnClickListener {
+public class FragmentPageTab extends BaseFragment implements View.OnClickListener {
+
+    public static final String TAB_INDEX = "TAB_INDEX";
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View root=inflater.inflate(R.layout.fragment_page12,container,false);
+        View root = inflater.inflate(R.layout.fragment_page_one, container, false);
         TextView message= (TextView) root.findViewById(R.id.message);
         message.setGravity(Gravity.CENTER);
-        message.setTextSize(35);
+        message.setTextSize(25);
         message.setTextColor(0xFFFF0000);
-        message.setText(getClass().getSimpleName().toUpperCase());
+        message.setText("TAB FRAGMENT " + getArguments().getInt(TAB_INDEX));
         Button button= ViewUtils.view(root,R.id.jump);
         button.setText("go back");
         button.setOnClickListener(this);
@@ -36,6 +39,8 @@ public class FragmentPage2 extends BaseFragment implements View.OnClickListener 
 
     @Override
     public void onClick(View v) {
-      getFragmentManager().popBackStack();
+        if (getParentFragment() != null) {
+            getParentFragment().getFragmentManager().popBackStack();
+        }
     }
 }

@@ -97,7 +97,7 @@ public abstract class HandleResult implements IHandleResult {
     /**
      * format View to a short description String like "EditText[editText1#id/7f0b0051]"
      */
-    public String formatView(View view) {
+    public static String formatView(View view) {
         if (view == null) {
             return "";
         } else {
@@ -121,7 +121,7 @@ public abstract class HandleResult implements IHandleResult {
     /**
      * format timestamp {@link SimpleDateFormat}
      */
-    public String formatTime(long time, String format) {
+    public static String formatTime(long time, String format) {
         return new SimpleDateFormat(format == null ? "mm:ss.SSS" : format)
                 .format(new java.util.Date(time));
     }

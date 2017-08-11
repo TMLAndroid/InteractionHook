@@ -2,6 +2,7 @@ package com.rexy.example.widget;
 
 import android.app.Activity;
 import android.content.Context;
+import android.support.v4.view.ViewCompat;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -16,6 +17,7 @@ import android.widget.ToggleButton;
 import com.rexy.example.extend.ViewUtils;
 import com.rexy.hook.interfaces.IHandleResult;
 import com.rexy.interactionhook.example.R;
+import com.rexy.widgets.layout.PageScrollView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,10 +46,11 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
     }
 
 
-    TextView mTextTitle;
-    TextView mTextMessage;
     View mIcon;
     View mLayoutOption;
+    TextView mTextTitle;
+    TextView mTextMessage;
+    PageScrollView mScrollView;
     boolean mExpanded;
     List<IHandleResult> mResults = new ArrayList(16);
 
@@ -69,6 +72,8 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
         initToggleButton(rootView, R.id.toogleGesture);
         initToggleButton(rootView, R.id.toogleFocus);
         initToggleButton(rootView, R.id.toogleError);
+        mScrollView = ViewUtils.view(rootView, R.id.scrollView);
+        mScrollView.setMaxHeight((int) (rootView.getResources().getDisplayMetrics().heightPixels * 0.35f));
     }
 
     private void initToggleButton(View rootView, int rid) {
@@ -174,6 +179,9 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
         mTextMessage.append(":");
         mTextMessage.append(result.toShortString(null));
         mTextMessage.append("\n\n");
+        if (ViewCompat.canScrollVertically(mScrollView, 1)) {
+            mScrollView.scrollTo(0, mTextMessage.getMeasuredHeight(), -1);
+        }
     }
 
 

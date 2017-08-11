@@ -7,7 +7,7 @@ import android.support.v4.util.Pools;
  * just record the option type .
  */
 class PageOperate {
-    static final int sMaxOperateLength = 10;
+    static final int sMaxOperateLength = 4;
     /**
      * code for onResume
      */
@@ -94,20 +94,20 @@ class PageOperate {
      */
     public String getOptionName() {
         if (mOption == OPERATE_RESUME) {
-            return "R";
+            return "resume";
         }
         if (mOption == OPERATE_PAUSE) {
-            return "P";
+            return "pause";
         }
         if (mOption == OPERATE_HIDE) {
-            return "H";
+            return "hide";
         }
         if (mOption == OPERATE_SHOW) {
-            return "S";
+            return "show";
         }
         if (mOption == OPERATE_DESTROY) {
-            return "D";
+            return "destroy";
         }
-        return "U";
+        return "unknown";
     }
 }

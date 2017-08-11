@@ -10,20 +10,18 @@ import java.lang.ref.WeakReference;
  * @author: rexy
  * @date: 2017-08-10 13:46
  */
-public class PageActivityRecord extends PageRecord {
+public class PageActivityRecord extends PageRecord<PageActivityRecord, Activity> {
     PageFragmentRecord mFragmentRecords;
-    PageActivityRecord mNext;
-    WeakReference<Activity> mActivityRef;
 
     PageActivityRecord(Activity activity, PageActivityRecord next) {
-        mActivityRef = new WeakReference(activity);
+        mRecorder = new WeakReference(activity);
         mNext = next;
     }
 
     PageFragmentRecord findFragmentRecordNoRecursive(Object fragment, PageFragmentRecord fromRecord) {
         PageFragmentRecord recorder = fromRecord;
         while (recorder != null) {
-            if (recorder.mFragment != null && recorder.mFragment.get() == fragment) {
+            if (recorder.mRecorder != null && recorder.mRecorder.get() == fragment) {
                 return recorder;
             } else {
                 recorder = recorder.mNext;
@@ -35,7 +33,7 @@ public class PageActivityRecord extends PageRecord {
     PageFragmentRecord findFragmentRecordRecursive(Object fragment, PageFragmentRecord fromRecord) {
         PageFragmentRecord find = null;
         if (fromRecord != null) {
-            if (fromRecord.mFragment != null && fromRecord.mFragment.get() == fragment) {
+            if (fromRecord.mRecorder != null && fromRecord.mRecorder.get() == fragment) {
                 find = fromRecord;
             } else {
                 if (fromRecord.mNext != null) {
@@ -63,7 +61,7 @@ public class PageActivityRecord extends PageRecord {
         return null;
     }
 
-    void record(Object fragment, Object parentFragment, int optionCode) {
+    PageRecord record(Object fragment, Object parentFragment, int optionCode) {
         PageFragmentRecord fragmentRecord = null;
         if (mFragmentRecords == null) {
             fragmentRecord = new PageFragmentRecord(fragment, mFragmentRecords);
@@ -77,7 +75,7 @@ public class PageActivityRecord extends PageRecord {
                 } else {
                     if (optionCode == PageOperate.OPERATE_DESTROY) {
                         destroyFragment(fragmentRecord, null);
-                        return;
+                        return fragmentRecord;
                     }
                 }
             } else {
@@ -90,7 +88,7 @@ public class PageActivityRecord extends PageRecord {
                     } else {
                         if (optionCode == PageOperate.OPERATE_DESTROY) {
                             destroyFragment(fragmentRecord, parentRecord);
-                            return;
+                            return fragmentRecord;
                         }
                     }
                 }
@@ -99,6 +97,7 @@ public class PageActivityRecord extends PageRecord {
         if (fragmentRecord != null) {
             fragmentRecord.record(optionCode);
         }
+        return fragmentRecord;
     }
 
     /**
@@ -132,9 +131,9 @@ public class PageActivityRecord extends PageRecord {
      */
     void destroy() {
         super.destroy();
-        if (mActivityRef != null) {
-            mActivityRef.clear();
-            mActivityRef = null;
+        if (mRecorder != null) {
+            mRecorder.clear();
+            mRecorder = null;
         }
         mNext = null;
         if (mFragmentRecords != null) {

@@ -21,14 +21,14 @@ import com.rexy.interactionhook.example.R;
 public class FragmentPageOne extends BaseFragment implements View.OnClickListener {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View root=inflater.inflate(R.layout.fragment_page12,container,false);
+        View root = inflater.inflate(R.layout.fragment_page_one, container, false);
         TextView message= (TextView) root.findViewById(R.id.message);
         message.setGravity(Gravity.CENTER);
         message.setTextSize(35);
         message.setTextColor(0xFFFF0000);
         message.setText(getClass().getSimpleName().toUpperCase());
         Button button= ViewUtils.view(root,R.id.jump);
-        button.setText("jump to fragment2");
+        button.setText("jump to fragment container");
         button.setOnClickListener(this);
         root.setBackgroundColor(0x330f000f);
         return root;
@@ -36,8 +36,6 @@ public class FragmentPageOne extends BaseFragment implements View.OnClickListene
 
     @Override
     public void onClick(View v) {
-        getFragmentManager().beginTransaction().replace(android.R.id.content,new FragmentPage2()).addToBackStack("page2").commitAllowingStateLoss();
+        getFragmentManager().beginTransaction().replace(android.R.id.content, new FragmentContainer()).addToBackStack("page2").commitAllowingStateLoss();
     }
-
-
 }

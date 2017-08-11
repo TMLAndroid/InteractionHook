@@ -59,10 +59,12 @@ public class ActivityMain extends BaseActivity implements View.OnClickListener {
         if (v.getId() == R.id.jump) {
             ActivityCommon.launch(this, FragmentPageOne.class);
         } else {
-            TestRecyclerAdapter.TestRecyclerViewHolder holder= (TestRecyclerAdapter.TestRecyclerViewHolder) mRecyclerView.getChildViewHolder(v);
-            if (holder!=null) {
-                TestRecyclerAdapter adapter = (TestRecyclerAdapter) mRecyclerView.getAdapter();
-                Toast.makeText(v.getContext(), adapter.getItem(holder.getAdapterPosition()).title, Toast.LENGTH_SHORT).show();
+            if(v.getParent()==mRecyclerView){
+                TestRecyclerAdapter.TestRecyclerViewHolder holder= (TestRecyclerAdapter.TestRecyclerViewHolder) mRecyclerView.getChildViewHolder(v);
+                if (holder!=null) {
+                    TestRecyclerAdapter adapter = (TestRecyclerAdapter) mRecyclerView.getAdapter();
+                    Toast.makeText(v.getContext(), adapter.getItem(holder.getAdapterPosition()).title, Toast.LENGTH_SHORT).show();
+                }
             }
         }
     }

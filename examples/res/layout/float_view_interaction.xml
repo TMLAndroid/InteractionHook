@@ -23,6 +23,16 @@
             android:textColor="#000000" />
 
         <ImageView
+            android:id="@+id/close"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:paddingLeft="3dp"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp"
+            android:src="@android:drawable/ic_menu_close_clear_cancel" />
+
+        <ImageView
             android:id="@+id/clean"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -30,7 +40,7 @@
             android:paddingBottom="5dp"
             android:paddingLeft="5dp"
             android:paddingTop="5dp"
-            android:src="@android:drawable/ic_menu_revert" />
+            android:src="@android:drawable/ic_menu_delete" />
 
         <ImageView
             android:id="@+id/icon"
@@ -42,25 +52,16 @@
             android:paddingTop="5dp"
             android:src="@android:drawable/ic_menu_more" />
 
-        <ImageView
-            android:id="@+id/close"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_marginLeft="3dp"
-            android:paddingBottom="5dp"
-            android:paddingTop="5dp"
-            android:src="@android:drawable/ic_menu_close_clear_cancel" />
     </LinearLayout>
 
     <com.rexy.widgets.layout.PageScrollView
+        android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="35dp"
         android:orientation="vertical"
         android:paddingLeft="10dp"
         android:paddingRight="10dp">
-
         <TextView
             android:id="@+id/message"
             android:layout_width="match_parent"
