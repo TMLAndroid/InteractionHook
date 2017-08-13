@@ -5,7 +5,7 @@ import android.util.SparseIntArray;
 import android.view.View;
 import android.view.ViewConfiguration;
 
-import com.rexy.hook.InteractionHook;
+import com.rexy.hook.HandlerManager;
 import com.rexy.hook.record.TouchRecord;
 
 import java.util.Map;
@@ -55,7 +55,7 @@ public class HandlerPreventFastClick extends HookHandler {
     }
 
     @Override
-    public void init(InteractionHook caller, Activity activity) {
+    public void init(HandlerManager caller, Activity activity) {
         super.init(caller, activity);
         mTouchSlop = ViewConfiguration.get(activity).getScaledTouchSlop();
         mClickDistance = activity.getResources().getDisplayMetrics().widthPixels - mTouchSlop;
@@ -68,7 +68,7 @@ public class HandlerPreventFastClick extends HookHandler {
      * @return true to intercept the touch event
      */
     @Override
-    public boolean handle(InteractionHook caller) {
+    public boolean handle(HandlerManager caller) {
         TouchRecord cur = caller.getTouchRecord(), pre = caller.getLastTouchRecord();
         boolean intercept = false;
         if (mIgnoreNextRound) {
@@ -84,7 +84,8 @@ public class HandlerPreventFastClick extends HookHandler {
                 if (intercept) {
                     View targetView = pre.getTargetView();
                     if (intercept = clickViewAt(cur.getDownX(), cur.getDownY(), targetView)) {
-                        reportResult(new ResultPreventFastClick(targetView, getTag(), cur, mClickInterval));
+                        Activity activity= mHandlerManager ==null?null: mHandlerManager.getActivity();
+                        reportResult(new ResultPreventFastClick(activity,targetView, getTag(), cur, mClickInterval));
                     }
                 }
                 if (mDynamicAdjustInterval && interval < MAX_CLICK_INTERVAL) {
@@ -166,8 +167,8 @@ public class HandlerPreventFastClick extends HookHandler {
         private int mClickY;
         private int mClickAverageInterval;
 
-        private ResultPreventFastClick(View target, String tag, TouchRecord down, int clickInterval) {
-            super(target, tag, down.getDownTime());
+        private ResultPreventFastClick(Activity activity,View target, String tag, TouchRecord down, int clickInterval) {
+            super(activity,target, tag, down.getDownTime());
             mClickX = (int) down.getDownX();
             mClickY = (int) down.getDownY();
             mClickAverageInterval = clickInterval;

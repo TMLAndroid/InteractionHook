@@ -1,6 +1,8 @@
 package com.rexy.hook.handler;
 
-import com.rexy.hook.InteractionHook;
+import android.app.Activity;
+
+import com.rexy.hook.HandlerManager;
 import com.rexy.hook.record.TouchRecord;
 
 import java.util.Map;
@@ -18,10 +20,11 @@ public class HandlerGesture extends HookHandler {
     }
 
     @Override
-    public boolean handle(InteractionHook caller) {
+    public boolean handle(HandlerManager caller) {
         TouchRecord record = caller.getTouchRecord();
         if (record.isDraggedPossible()) {
-            reportResult(new ResultGesture(record,getTag()));
+            Activity activity= mHandlerManager ==null?null: mHandlerManager.getActivity();
+            reportResult(new ResultGesture(activity,record,getTag()));
             return true;
         }
         return false;
@@ -68,8 +71,8 @@ public class HandlerGesture extends HookHandler {
         private float mFlingY;
 
 
-        private ResultGesture(TouchRecord record,String tag) {
-            super(record.getTargetView(),tag, record.getUpTime());
+        private ResultGesture(Activity activity,TouchRecord record, String tag) {
+            super(activity,record.getTargetView(),tag, record.getUpTime());
             mDownX = record.getDownX();
             mDownY = record.getDownY();
             mDownTime = record.getDownTime();

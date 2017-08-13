@@ -1,471 +1,118 @@
 package com.rexy.hook;
 
 import android.app.Activity;
+import android.app.Application;
 import android.os.Build;
-import android.util.Log;
+import android.os.Bundle;
 import android.view.MotionEvent;
-import android.view.ViewGroup;
 
-import com.rexy.hook.handler.HandlerFocus;
-import com.rexy.hook.handler.HandlerGesture;
-import com.rexy.hook.handler.HandlerInput;
-import com.rexy.hook.handler.HandlerPreventFastClick;
-import com.rexy.hook.handler.HandlerProxyClick;
 import com.rexy.hook.interfaces.IHandleListener;
 import com.rexy.hook.interfaces.IHandleResult;
 import com.rexy.hook.interfaces.IHookHandler;
-import com.rexy.hook.record.PageTracker;
-import com.rexy.hook.record.TouchRecord;
-import com.rexy.hook.record.TouchTracker;
+
+import java.util.List;
+import java.util.WeakHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * <p>
- * this class manages a variety of handler {@link com.rexy.hook.handler.HookHandler},{@link IHookHandler} in order to monitor and collect global interaction event.
- * each handler focus on handling just on kind of interactions such as keyboard input,touch gesture,view click,focus change and so on.
- * </p>
- *
- * <p>
- * here is a simple example how to use to collect and monitor the use's interaction .
- * </p>
- * <p>
- * before entry process, we need register a global HandlerListener use {@link InteractionHook#setGlobalHandleListener;}
- * </p>
- * <p>
- * public class BaseActivity extends FragmentActivity {
- * private InteractionHook mInteractionHook;
- *
- * @Override protected void onCreate(Bundle savedInstanceState) {
- * requestWindowFeature(Window.FEATURE_NO_TITLE);
- * super.onCreate(savedInstanceState);
- * mInteractionHook = new InteractionHook(this, true, "rexy_interaction");
- * }
- * @Override protected void onDestroy() {
- * super.onDestroy();
- * if (mInteractionHook != null) {
- * mInteractionHook.destroy();
- * }
- * }
- * @Override public boolean dispatchTouchEvent(MotionEvent ev) {
- * boolean handled = mInteractionHook == null ? false : mInteractionHook.onTouch(ev);
- * if (handled) {
- * final long now = SystemClock.uptimeMillis();
- * MotionEvent cancelEvent = MotionEvent.obtain(now, now,
- * MotionEvent.ACTION_CANCEL, ev.getX(), ev.getY(), 0);
- * cancelEvent.setSource(InputDevice.SOURCE_TOUCHSCREEN);
- * if (mInteractionHook != null) {
- * mInteractionHook.onTouch(cancelEvent);
- * }
- * super.dispatchTouchEvent(cancelEvent);
- * }
- * return handled || super.dispatchTouchEvent(ev);
- * }
- * }
- * </p>
- * @author: rexy
- * @date: 2017-07-31 14:11
+ * Created by rexy on 17/8/13.
  */
-public class InteractionHook implements IHandleListener {
-    private static IHandleListener sHandlerListener;
-
-    private Activity mActivity = null;
-    private TouchTracker mTouchTracker;
-    private HandlerPreventFastClick mHandlerFastClick;
-    private HandlerProxyClick mHandlerProxyClick;
-    private HandlerGesture mHandlerGesture;
-    private HandlerInput mHandlerInput;
-    private HandlerFocus mHandlerFocus;
-
-    /**
-     * use for logger debug info
-     */
-    private String mLogTag;
-
-    /**
-     * @see #InteractionHook(Activity, boolean, String)
-     */
-    public InteractionHook(Activity activity, boolean mountHandler) {
-        this(activity, mountHandler, null);
-    }
-
-    /**
-     * create a hook instance for monitor user interaction
-     * @param activity current context activity .
-     * @param installHandler whether to install all the feature handler
-     * @param logTag if not empty the log recorder is available .
-     */
-    public InteractionHook(Activity activity, boolean installHandler, String logTag) {
-        mActivity = activity;
-        ViewGroup rootView = null;
-        if (mActivity.getWindow().getDecorView() instanceof ViewGroup) {
-            rootView = (ViewGroup) mActivity.getWindow().getDecorView();
+public class InteractionHook {
+    private static List<IHandleListener> sHandleListeners = new CopyOnWriteArrayList();
+    private static WeakHashMap<Activity, HandlerManager> sHandlers = new WeakHashMap();
+    private static Application.ActivityLifecycleCallbacks sLifeCycle = new Application.ActivityLifecycleCallbacks() {
+        @Override
+        public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
+            onCreate(activity);
         }
-        mTouchTracker = new TouchTracker(rootView);
-        if (installHandler) {
-            setHandleFastClickEnable(true);
-            setHandleProxyClickEnable(true);
-            setHandleFocusEnable(true);
-            setHandleInputEnable(true);
-            setHandleGestureEnable(true);
+
+        @Override
+        public void onActivityStarted(Activity activity) {
         }
-        if (logTag != null) {
-            setLogTag(logTag);
+
+        @Override
+        public void onActivityResumed(Activity activity) {
         }
-    }
 
-    /**
-     * whether the log is allowed to output {@link #mLogTag}
-     *
-     * @return true is allowed to output a log
-     */
-    protected boolean isLogAccess() {
-        return mLogTag != null;
-    }
-
-    /**
-     * set log tag {@link #isLogAccess()}
-     */
-    public void setLogTag(String logTag) {
-        mLogTag = logTag;
-    }
-
-    /**
-     * print log information inner
-     */
-    protected void print(CharSequence category, CharSequence msg) {
-        String tag = mLogTag + "#";
-        if (category == null || msg == null) {
-            msg = category == null ? msg : category;
-        } else {
-            tag = tag + category;
+        @Override
+        public void onActivityPaused(Activity activity) {
         }
-        Log.d(tag, String.valueOf(msg));
-    }
 
-    /**
-     * get current context activity
-     */
-    public Activity getActivity() {
-        return mActivity;
-    }
-
-    /**
-     * get the root view ,in most situation it will deservedly be DecorView
-     */
-    public ViewGroup getRootView() {
-        return mTouchTracker.getRootView();
-    }
-
-    /**
-     * get current TouchRecord information,which record a series of touch information from ACTION_DOWN to ACTION_UP.
-     * @return return latest {@link TouchRecord}
-     */
-    public TouchRecord getTouchRecord() {
-        return mTouchTracker.getTouchRecord();
-    }
-
-    /**
-     * get the previous TouchRecord information
-     */
-    public TouchRecord getLastTouchRecord() {
-        return mTouchTracker.getLastTouchRecord();
-    }
-
-    private <T extends IHookHandler> T dispatchDestroy(IHookHandler handler) {
-        if (handler != null) {
-            handler.destroy();
+        @Override
+        public void onActivityStopped(Activity activity) {
         }
-        return (T) null;
-    }
 
-    private boolean dispatchHandle(IHookHandler handler) {
-        return handler != null && handler.supportHandle() && handler.handle(this);
-    }
+        @Override
+        public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
+        }
 
-    private boolean dispatchInit(IHookHandler handler) {
-        if (handler != null) {
-            handler.init(this, mActivity);
+        @Override
+        public void onActivityDestroyed(Activity activity) {
+            onDestroy(activity);
         }
-        return handler != null && handler.supportHandle();
-    }
+    };
 
-    /**
-     * set a handler who is interest in proxy and monitor any View click event , {@link HandlerProxyClick},{@link  android.view.View.OnClickListener}
-     */
-    public void setHandleProxyClick(HandlerProxyClick handler) {
-        if (handler != mHandlerProxyClick) {
-            dispatchDestroy(mHandlerProxyClick);
-            mHandlerProxyClick = handler;
-            dispatchInit(handler);
+    private static IHandleListener sListenerInner = new IHandleListener() {
+        @Override
+        public boolean onHandle(IHookHandler handler, IHandleResult result) {
+            return onReceiveHandleResult(handler, result);
         }
-    }
+    };
 
-    /**
-     * set proxy click handler enable or disable
-     *
-     * @param enable true will ensure the handler is set , it will set a default handler when it is null.
-     */
-    public void setHandleProxyClickEnable(boolean enable) {
-        if (enable && mHandlerProxyClick == null) {
-            setHandleProxyClick(new HandlerProxyClick("proxy-click"));
-        }
-        if (mHandlerProxyClick != null) {
-            mHandlerProxyClick.setHandlerEnable(enable);
-        }
-    }
-
-    /**
-     * set a fast click handler to intercept any continuous twice click event , {@link HandlerPreventFastClick}.
-     */
-    public void setHandleFastClick(HandlerPreventFastClick handler) {
-        if (handler != mHandlerFastClick) {
-            dispatchDestroy(mHandlerFastClick);
-            mHandlerFastClick = handler;
-            dispatchInit(handler);
-        }
-    }
-
-    /**
-     * set fast click handler enable or disable
-     *
-     * @param enable true will ensure the handler is set , it will set a default handler when it is null.
-     */
-    public void setHandleFastClickEnable(boolean enable) {
-        if (enable && mHandlerFastClick == null) {
-            setHandleFastClick(new HandlerPreventFastClick("prevent-click"));
-        }
-        if (mHandlerFastClick != null) {
-            mHandlerFastClick.setHandlerEnable(enable);
-        }
-    }
-
-    /**
-     * set fast click handler disable temporary just at next click event happened .
-     */
-    public void setIgnoreFastClickNextRound() {
-        if (mHandlerFastClick == null) {
-            setHandleFastClickEnable(true);
-        }
-        mHandlerFastClick.setIgnoreNextRound(true);
-    }
-
-    /**
-     * set touch gesture handler to analyze any move gesture ,{@link HandlerGesture}
-     */
-    public void setHandleGesture(HandlerGesture handler) {
-        if (handler != mHandlerGesture) {
-            dispatchDestroy(mHandlerGesture);
-            mHandlerGesture = handler;
-            dispatchInit(handler);
-            mTouchTracker.setHandleDragEnable(handler != null);
-        }
-    }
-
-    /**
-     * set gesture handler enable or disable
-     *
-     * @param enable true will ensure the handler is set , it will set a default handler when it is null.
-     */
-    public void setHandleGestureEnable(boolean enable) {
-        if (enable && mHandlerGesture == null) {
-            setHandleGesture(new HandlerGesture("gesture"));
-        }
-        if (mHandlerGesture != null) {
-            mHandlerGesture.setHandlerEnable(enable);
-            mTouchTracker.setHandleDragEnable(enable);
-        }
-    }
-
-    /**
-     * set input handler to handle any input by the user ,{@link HandlerInput},
-     * the input event include keyboard code, device menu and so on .
-     */
-    public void setHandleInput(HandlerInput handler) {
-        if (handler != mHandlerInput) {
-            dispatchDestroy(mHandlerInput);
-            mHandlerInput = handler;
-            dispatchInit(handler);
-        }
-    }
-
-    /**
-     * set input handler enable or disable
-     *
-     * @param enable true will ensure the handler is set , it will set a default handler when it is null.
-     */
-    public void setHandleInputEnable(boolean enable) {
-        if (enable && mHandlerInput == null) {
-            setHandleInput(new HandlerInput("input"));
-        }
-        if (mHandlerInput != null) {
-            mHandlerInput.setHandlerEnable(enable);
-        }
-    }
-
-    /**
-     * set input handler to handle any focus change event, {@link HandlerFocus},
-     * the input event include keyboard code, device menu and so on .
-     */
-    public void setHandleFocus(HandlerFocus handler) {
-        if (handler != mHandlerFocus) {
-            dispatchDestroy(mHandlerFocus);
-            mHandlerFocus = handler;
-            dispatchInit(handler);
-        }
-    }
-
-    /**
-     * set input handler enable or disable
-     *
-     * @param enable true will ensure the handler is set , it will set a default handler when it is null.
-     */
-    public void setHandleFocusEnable(boolean enable) {
-        if (enable && mHandlerFocus == null) {
-            setHandleFocus(new HandlerFocus("focus"));
-        }
-        if (mHandlerFocus != null) {
-            mHandlerFocus.setHandlerEnable(enable);
-        }
-    }
-
-    /**
-     * dispatch the top touch event,give a chance to any handler to handle ,called by the {@link Activity#dispatchTouchEvent(MotionEvent)}
-     *
-     * @param ev original touch event
-     * @return true will intercept the touch sequence until the next down event happened.
-     */
-    public boolean onTouch(MotionEvent ev) {
-        boolean intercept = false;
-        int action = ev.getActionMasked();
-        mTouchTracker.onTouch(ev, action);
-        if (MotionEvent.ACTION_DOWN == action) {
-            dispatchHandle(mHandlerProxyClick);
-            intercept = dispatchHandle(mHandlerFastClick);
-        } else {
-            if ((MotionEvent.ACTION_UP == action || MotionEvent.ACTION_CANCEL == action)) {
-                dispatchHandle(mHandlerGesture);
+    public static void init(Application application, IHandleListener listener) {
+        if (application != null) {
+            if (Build.VERSION.SDK_INT >= 14) {
+                application.registerActivityLifecycleCallbacks(sLifeCycle);
             }
         }
-        return intercept;
-    }
-
-    /**
-     * do some recycle and destroy task,
-     * called in the activity lifecycle method destroy,{@link Activity#onDestroy()}
-     */
-    public void destroy() {
-        mHandlerProxyClick = dispatchDestroy(mHandlerProxyClick);
-        mHandlerFastClick = dispatchDestroy(mHandlerFastClick);
-        mHandlerGesture = dispatchDestroy(mHandlerGesture);
-        mHandlerInput = dispatchDestroy(mHandlerInput);
-        if (mTouchTracker != null) {
-            mTouchTracker.destroy();
-            mTouchTracker = null;
-        }
-        mActivity = null;
-    }
-
-    /**
-     * called when any handler happened to catch a exception.
-     *
-     * @param handler  the handler who observed the error ,{@link IHookHandler},{@link IHookHandler}.
-     * @param error    the original error caught by the handler
-     * @param category a identify group option tag .
-     * @return return true to intercept the original handle error .
-     */
-    @Override
-    public boolean onReceiveHandleError(IHookHandler handler, Throwable error, String category) {
-        boolean handled = sHandlerListener == null ? false : sHandlerListener.onReceiveHandleError(handler, error, category);
-        if (!handled && isLogAccess()) {
-            print("error", category + ">" + error);
-        }
-        return handled;
-    }
-
-    /**
-     * called when a handler success handled something and created a result .
-     * @param handler  handler who create this result ,{@link IHookHandler},{@link IHookHandler}.
-     * @param result   handle result , a data struct see {@link com.rexy.hook.handler.HandleResult}
-     * @return
-     */
-    @Override
-    public boolean onReceiveHandleResult(IHookHandler handler, IHandleResult result) {
-        boolean handled = sHandlerListener == null ? false : sHandlerListener.onReceiveHandleResult(handler, result);
-        if (isLogAccess()) {
-            print(handler.getTag(), result.toShortString(null));
-        }
-        return handled;
-    }
-
-    /**
-     * set a global hook handle listener
-     * @param l {@link IHandleListener}
-     */
-    public static void setGlobalHandleListener(IHandleListener l) {
-        sHandlerListener = l;
-        if(sPageTracker!=null){
-            sPageTracker.setHandleListener(l);
+        if (!sHandleListeners.contains(listener)) {
+            sHandleListeners.add(listener);
         }
     }
 
-
-    private static PageTracker sPageTracker;
-
-    private static PageTracker getPageTracker() {
-        if (sPageTracker == null) {
-            sPageTracker = new PageTracker("page");
-            sPageTracker.setHandleListener(sHandlerListener);
+    public static void onCreate(Activity activity) {
+        if (!sHandlers.containsKey(activity)) {
+            HandlerManager handler=new HandlerManager(activity, true);
+            handler.setHandleListener(sListenerInner);
+            sHandlers.put(activity, handler);
         }
-        return sPageTracker;
-    }
-
-    public static void onResume(Activity activity) {
-        getPageTracker().onResume(activity, null, null);
-    }
-
-    public static void onPause(Activity activity) {
-        getPageTracker().onPause(activity, null, null);
     }
 
     public static void onDestroy(Activity activity) {
-        getPageTracker().onDestroy(activity, null, null);
-    }
-
-    public static void onResume(android.support.v4.app.Fragment fragment) {
-        getPageTracker().onResume(fragment.getActivity(), fragment, fragment.getParentFragment());
-    }
-
-    public static void onPause(android.support.v4.app.Fragment fragment) {
-        getPageTracker().onPause(fragment.getActivity(), fragment, fragment.getParentFragment());
-    }
-
-    public static void onHiddenChanged(android.support.v4.app.Fragment fragment, boolean hidden) {
-        getPageTracker().onHiddenChanged(fragment.getActivity(), fragment, fragment.getParentFragment(), hidden);
-    }
-
-    public static void onDestroy(android.support.v4.app.Fragment fragment) {
-        getPageTracker().onDestroy(fragment.getActivity(), fragment, fragment.getParentFragment());
-    }
-
-    private static Object getParentFragment(android.app.Fragment fragment){
-        if(Build.VERSION.SDK_INT>=17){
-            return fragment.getParentFragment();
+        if (sHandlers.containsKey(activity)) {
+            HandlerManager manager = sHandlers.get(activity);
+            if (manager != null) {
+                manager.destroy();
+            }
+            sHandlers.remove(activity);
         }
-        return null;
     }
 
-    public static void onResume(android.app.Fragment fragment) {
-        getPageTracker().onResume(fragment.getActivity(), fragment, getParentFragment(fragment));
+    public static boolean onTouch(Activity activity, MotionEvent ev) {
+        boolean result = false;
+        HandlerManager manager = sHandlers.get(activity);
+        if (manager != null) {
+            result = manager.onTouch(ev);
+        }
+        return result;
     }
 
-    public static void onPause(android.app.Fragment fragment) {
-        getPageTracker().onPause(fragment.getActivity(), fragment, getParentFragment(fragment));
+    public static void registerHandleListener(IHandleListener l) {
+        sHandleListeners.add(l);
     }
 
-    public static void onHiddenChanged(android.app.Fragment fragment, boolean hidden) {
-        getPageTracker().onHiddenChanged(fragment.getActivity(), fragment, getParentFragment(fragment), hidden);
+    public static void unregisterHandleListener(IHandleListener l) {
+        sHandleListeners.remove(l);
     }
 
-    public static void onDestroy(android.app.Fragment fragment) {
-        getPageTracker().onDestroy(fragment.getActivity(), fragment, getParentFragment(fragment));
+    private static boolean onReceiveHandleResult(IHookHandler handler, IHandleResult result) {
+        boolean handled=false;
+        for(IHandleListener l :sHandleListeners){
+            if(l.onHandle(handler,result)){
+                handled=true;
+                break;
+            }
+        }
+        return handled;
     }
 }

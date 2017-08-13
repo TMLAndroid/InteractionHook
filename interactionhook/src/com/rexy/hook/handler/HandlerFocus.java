@@ -6,7 +6,7 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.EditText;
 
-import com.rexy.hook.InteractionHook;
+import com.rexy.hook.HandlerManager;
 
 import java.util.Map;
 
@@ -42,7 +42,7 @@ public class HandlerFocus extends HookHandler {
     }
 
     @Override
-    public void init(InteractionHook caller, Activity activity) {
+    public void init(HandlerManager caller, Activity activity) {
         super.init(caller, activity);
         mRootView = caller.getRootView();
         mRootView.getViewTreeObserver().addOnGlobalFocusChangeListener(mFocusListener);
@@ -67,13 +67,15 @@ public class HandlerFocus extends HookHandler {
         }
         if (mFocusView != focusView) {
             mFocusView = focusView;
-            reportResult(new ResultFocus(focusView == null ? oldFocusView : focusView, getTag(), focusView, oldFocusView));
+            Activity activity= mHandlerManager ==null?null: mHandlerManager.getActivity();
+            View targetView=focusView == null ? oldFocusView : focusView;
+            reportResult(new ResultFocus(activity,targetView, getTag(), focusView, oldFocusView));
         }
     }
 
 
     @Override
-    public boolean handle(InteractionHook caller) {
+    public boolean handle(HandlerManager caller) {
         return false;
     }
 
@@ -95,8 +97,8 @@ public class HandlerFocus extends HookHandler {
         private View mOldFocusView;
         private View mFocusView;
 
-        private ResultFocus(View target, String tag, View focusView, View oldFocusView) {
-            super(target, tag);
+        private ResultFocus(Activity activity,View target, String tag, View focusView, View oldFocusView) {
+            super(activity,target, tag);
             mFocusView = focusView;
             mOldFocusView = oldFocusView;
         }

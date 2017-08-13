@@ -9,7 +9,7 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.EditText;
 
-import com.rexy.hook.InteractionHook;
+import com.rexy.hook.HandlerManager;
 import com.rexy.hook.record.InputRecord;
 
 import java.util.Map;
@@ -86,7 +86,7 @@ public class HandlerInput extends HookHandler {
     }
 
     @Override
-    public void init(InteractionHook caller, Activity activity) {
+    public void init(HandlerManager caller, Activity activity) {
         super.init(caller, activity);
         mRootView = caller.getRootView();
         mRootView.getViewTreeObserver().addOnGlobalFocusChangeListener(mFocusListener);
@@ -134,7 +134,7 @@ public class HandlerInput extends HookHandler {
     }
 
     @Override
-    public boolean handle(InteractionHook caller) {
+    public boolean handle(HandlerManager caller) {
         return false;
     }
 
@@ -155,7 +155,8 @@ public class HandlerInput extends HookHandler {
         }
 
         if (header != null) {
-            ResultInput result = new ResultInput(edit, getTag(), header.getReferTime());
+            Activity activity= mHandlerManager ==null?null: mHandlerManager.getActivity();
+            ResultInput result = new ResultInput(activity,edit, getTag(), header.getReferTime());
             long lastTime = header.getReferTime();
             while (header != null) {
                 lastTime = analyzeInputResult(lastTime, header.getReferTime(), header.getKeyRecord(), result);
@@ -241,8 +242,8 @@ public class HandlerInput extends HookHandler {
         private int mValidTimeCount;
 
 
-        private ResultInput(View target, String tag, long startTime) {
-            super(target, tag);
+        private ResultInput(Activity activity,View target, String tag, long startTime) {
+            super(activity,target, tag);
             mStartTime=startTime;
         }
 

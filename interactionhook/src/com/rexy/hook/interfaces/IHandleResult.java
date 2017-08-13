@@ -1,5 +1,6 @@
 package com.rexy.hook.interfaces;
 
+import android.app.Activity;
 import android.view.View;
 
 import java.util.Map;
@@ -16,6 +17,11 @@ public interface IHandleResult {
      * hook handler tag ,used to distinguish the other handler
      */
     String getTag();
+
+    /**
+     * get current activity when the result is created
+     */
+    Activity getActivity();
 
     /**
      * get target View for this handle result analyzed with

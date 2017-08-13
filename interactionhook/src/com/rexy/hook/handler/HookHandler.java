@@ -2,10 +2,11 @@ package com.rexy.hook.handler;
 
 import android.app.Activity;
 
-import com.rexy.hook.InteractionHook;
-import com.rexy.hook.interfaces.IHandleListener;
+import com.rexy.hook.HandlerManager;
 import com.rexy.hook.interfaces.IHandleResult;
 import com.rexy.hook.interfaces.IHookHandler;
+
+import java.util.Map;
 
 
 /**
@@ -27,9 +28,9 @@ public abstract class HookHandler implements IHookHandler {
     private String mTag;
 
     /**
-     * a callback use to subscribe for handle result and any error happened while deal with task
+     * a hook manager owns the handler supplying context and observing result or error happened while deal with task
      */
-    protected IHandleListener mHandleListener;
+    protected HandlerManager mHandlerManager;
 
     public HookHandler(String tag) {
         mTag = tag;
@@ -45,33 +46,69 @@ public abstract class HookHandler implements IHookHandler {
         return mHandlerEnable;
     }
 
-    @Override
-    public String getTag() {
+    protected String getTag() {
         return mTag;
     }
 
     @Override
-    public void init(InteractionHook caller, Activity activity) {
-        mHandleListener = caller;
+    public void init(HandlerManager caller, Activity activity) {
+        mHandlerManager = caller;
     }
 
     @Override
     public void reportError(Throwable error, String category) {
-        if (mHandleListener == null || !mHandleListener.onReceiveHandleError(this, error, category)) {
-            error.printStackTrace();
-        }
+        reportResult(new ResultError(mHandlerManager ==null?null: mHandlerManager.getActivity(),error, category));
     }
 
     @Override
     public boolean reportResult(IHandleResult result) {
-        if (mHandleListener != null && result != null) {
-            return mHandleListener.onReceiveHandleResult(this, result);
+        if (mHandlerManager != null && result != null) {
+            return mHandlerManager.onReceiveHandleResult(this, result);
         }
         return false;
     }
 
     @Override
     public void destroy() {
-        mHandleListener = null;
+        mHandlerManager = null;
+    }
+
+    public static class ResultError extends HandleResult {
+        /**
+         * error a caught exception while handle some task or do some initialization
+         */
+        Throwable mError;
+        /**
+         * category a identify group option tag .
+         */
+        String mCategory;
+
+        protected ResultError(Activity activity,Throwable error, String category) {
+            super(activity,null, "error");
+            mError = error;
+            mCategory = category;
+        }
+
+        public Throwable getError() {
+            return mError;
+        }
+
+        public String getCategory() {
+            return mCategory;
+        }
+
+        @Override
+        protected void toShortStringImpl(StringBuilder receiver) {
+            receiver.append("error=").append(formatError(getError())).append(',');
+            receiver.append("time=").append(formatTime(getTimestamp(), null)).append(',');
+            receiver.deleteCharAt(receiver.length() - 1);
+        }
+
+        @Override
+        protected void dumpResultImpl(Map<String, Object> receiver) {
+            receiver.put("error", getError());
+            receiver.put("category", getCategory());
+            receiver.put("time", getTimestamp());
+        }
     }
 }

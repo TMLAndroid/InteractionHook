@@ -1,9 +1,12 @@
 package com.rexy.hook.handler;
 
+import android.app.Activity;
 import android.content.res.Resources;
 import android.view.View;
 
+import com.rexy.hook.HandlerManager;
 import com.rexy.hook.interfaces.IHandleResult;
+import com.rexy.hook.interfaces.IHookHandler;
 
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
@@ -11,7 +14,7 @@ import java.util.Map;
 
 /**
  * <p>
- * this is a base abstract class implements {@link IHandleResult} ,it's used by {@link com.rexy.hook.interfaces.IHandleListener} after some Handler create a result which should be packaged as a HandleResult
+ * this is a base abstract class implements {@link IHandleResult} ,it's used by {@link HandlerManager#onReceiveHandleResult(IHookHandler, IHandleResult)} after some Handler create a result which should be packaged as a HandleResult
  * </p>
  *
  * <p>
@@ -23,16 +26,17 @@ import java.util.Map;
  */
 public abstract class HandleResult implements IHandleResult {
 
-    private View mTargetView;
-    private long mCreateTime;
     private String mTag;
+    private View mTargetView;
+    private Activity mActivity;
+    private long mCreateTime;
 
 
     /**
-     * @see #HandleResult(View, String,long)
+     * @see #HandleResult(Activity,View, String,long)
      */
-    protected HandleResult(View target,String tag) {
-        this(target,tag, System.currentTimeMillis());
+    protected HandleResult(Activity activity,View target,String tag) {
+        this(activity,target,tag, System.currentTimeMillis());
     }
 
     /**
@@ -40,15 +44,21 @@ public abstract class HandleResult implements IHandleResult {
      * @param tag hook handler tag ,used to distinguish the other handler
      * @param createTime the timestamp when this result is created
      */
-    protected HandleResult(View target, String tag, long createTime) {
+    protected HandleResult(Activity activity,View target, String tag, long createTime) {
+        mTag=tag;
+        mActivity=activity;
         mTargetView = target;
         mCreateTime = createTime;
-        mTag=tag;
     }
 
     @Override
     public String getTag(){
         return mTag;
+    }
+
+    @Override
+    public Activity getActivity() {
+        return mActivity;
     }
 
     @Override
@@ -125,4 +135,9 @@ public abstract class HandleResult implements IHandleResult {
         return new SimpleDateFormat(format == null ? "mm:ss.SSS" : format)
                 .format(new java.util.Date(time));
     }
+
+    public static String formatError(Throwable error){
+        return error==null?"":error.getCause().getMessage();
+    }
+
 }

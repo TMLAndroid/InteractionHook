@@ -25,7 +25,6 @@ import com.rexy.hook.interfaces.IHookHandler;
  * @date: 2017-06-05 14:45
  */
 public class BaseActivity extends FragmentActivity implements IHandleListener {
-    private InteractionHook mInteractionHook;
     //真正使用不是让 BaseActivity 去监听IHandleListener，设置个全局的监听就可以。
     //本例是为了在弹出浮层上适时显示监听结果。
     protected InteractionFloatViewHolder mInteractionViewHolder;
@@ -34,14 +33,10 @@ public class BaseActivity extends FragmentActivity implements IHandleListener {
     protected void onCreate(Bundle savedInstanceState) {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         super.onCreate(savedInstanceState);
-        mInteractionHook = new InteractionHook(this, true, "rexy_interaction");
-
+        InteractionHook.registerHandleListener(this);
         mInteractionViewHolder = InteractionFloatViewHolder.getInstance(this);
-
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         mInteractionViewHolder.updateViewWidth((int) (screenWidth * 0.9f), 0);
-        ((MyApplication) getApplication()).registerHandleListener(this);
-
         if (PermissionChecker.PERMISSION_GRANTED == PermissionChecker.checkSelfPermission(this, Manifest.permission.SYSTEM_ALERT_WINDOW)) {
             mInteractionViewHolder.show();
         } else {
@@ -62,51 +57,27 @@ public class BaseActivity extends FragmentActivity implements IHandleListener {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        boolean handled = mInteractionHook == null ? false : mInteractionHook.onTouch(ev);
+        boolean handled = InteractionHook.onTouch(this, ev);
         if (handled) {
             final long now = SystemClock.uptimeMillis();
             MotionEvent cancelEvent = MotionEvent.obtain(now, now,
                     MotionEvent.ACTION_CANCEL, ev.getX(), ev.getY(), 0);
             cancelEvent.setSource(InputDevice.SOURCE_TOUCHSCREEN);
-            if (mInteractionHook != null) {
-                mInteractionHook.onTouch(cancelEvent);
-            }
+            InteractionHook.onTouch(this, cancelEvent);
             super.dispatchTouchEvent(cancelEvent);
         }
         return handled || super.dispatchTouchEvent(ev);
     }
 
     @Override
-    public boolean onReceiveHandleError(IHookHandler handler, Throwable error, String category) {
-        mInteractionViewHolder.recordResult(new ErrorResult(null, "error", error));
-        return false;
-    }
-
-    @Override
-    public boolean onReceiveHandleResult(IHookHandler handler, IHandleResult result) {
-        mInteractionViewHolder.recordResult(result);
-        return false;
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        InteractionHook.onResume(this);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        InteractionHook.onPause(this);
-    }
-
-    @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (mInteractionHook != null) {
-            mInteractionHook.destroy();
-        }
-        ((MyApplication) getApplication()).unregisterHandleListener(this);
-        InteractionHook.onDestroy(this);
+        InteractionHook.unregisterHandleListener(this);
+    }
+
+    @Override
+    public boolean onHandle(IHookHandler handler, IHandleResult result) {
+        mInteractionViewHolder.recordResult(result);
+        return false;
     }
 }

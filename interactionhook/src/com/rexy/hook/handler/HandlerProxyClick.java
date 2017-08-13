@@ -6,7 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 
-import com.rexy.hook.InteractionHook;
+import com.rexy.hook.HandlerManager;
 import com.rexy.hook.interfaces.IProxyClickListener;
 import com.rexy.hook.record.TouchRecord;
 
@@ -53,7 +53,8 @@ public class HandlerProxyClick extends HookHandler {
     IProxyClickListener mInnerClickProxy = new IProxyClickListener() {
         @Override
         public boolean onProxyClick(WrapClickListener wrap, View v) {
-            return reportResult(new ResultProxyClick(v, getTag(), mDownX, mDownY,mDownTime));
+            Activity activity= mHandlerManager ==null?null: mHandlerManager.getActivity();
+            return reportResult(new ResultProxyClick(activity,v, getTag(), mDownX, mDownY,mDownTime));
         }
     };
 
@@ -129,7 +130,7 @@ public class HandlerProxyClick extends HookHandler {
      * @param activity context of a current Activity.
      */
     @Override
-    public void init(InteractionHook caller, Activity activity) {
+    public void init(HandlerManager caller, Activity activity) {
         super.init(caller, activity);
         if (sHookMethod == null) {
             try {
@@ -168,7 +169,7 @@ public class HandlerProxyClick extends HookHandler {
     }
 
     @Override
-    public boolean handle(InteractionHook caller) {
+    public boolean handle(HandlerManager caller) {
         View rootView = caller.getRootView();
         if (rootView != null) {
             TouchRecord down=caller.getTouchRecord();
@@ -192,8 +193,8 @@ public class HandlerProxyClick extends HookHandler {
         private int mClickY;
         private long mDownTime;
 
-        private ResultProxyClick(View target, String tag, float clickX, float clickY, long downTime) {
-            super(target, tag);
+        private ResultProxyClick(Activity activity,View target, String tag, float clickX, float clickY, long downTime) {
+            super(activity,target, tag);
             mClickX = (int) clickX;
             mClickY = (int) clickY;
             mDownTime = downTime;

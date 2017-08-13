@@ -2,21 +2,16 @@ package com.rexy.hook.interfaces;
 
 import android.app.Activity;
 
-import com.rexy.hook.InteractionHook;
+import com.rexy.hook.HandlerManager;
 
 /**
  *
- * a interface that should be realized by the handler {@link com.rexy.hook.handler.HookHandler} , every handler is managed by {@link InteractionHook} and dispatch to do some task .
+ * a interface that should be realized by the handler {@link com.rexy.hook.handler.HookHandler} , every handler is managed by {@link HandlerManager} and dispatch to do some task .
  *
  * Created by rexy on 17/7/31.
  */
 
 public interface IHookHandler {
-
-    /**
-     * hook handler tag ,used to distinguish the other handler
-     */
-    String getTag();
 
     /**
      * set handler disable or enable
@@ -29,7 +24,7 @@ public interface IHookHandler {
      * @param activity     context of a current Activity.
      * @param caller the InteractionHook who has context and hook data and manage this handler .
      */
-    void init(InteractionHook caller, Activity activity);
+    void init(HandlerManager caller, Activity activity);
 
     /**
      * any time receive a inner error call this method to report to its caller
@@ -57,7 +52,7 @@ public interface IHookHandler {
      * @param caller the InteractionHook who has context and hook data .
      * @return true if handled
      */
-    boolean handle(InteractionHook caller);
+    boolean handle(HandlerManager caller);
 
     /**
      * do some finalize here
