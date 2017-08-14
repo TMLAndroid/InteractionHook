@@ -16,7 +16,7 @@ import java.util.Map;
  * <p>
  * this is a base abstract class implements {@link IHandleResult} ,it's used by {@link HandlerManager#onReceiveHandleResult(IHookHandler, IHandleResult)} after some Handler create a result which should be packaged as a HandleResult
  * </p>
- *
+ * <p>
  * <p>
  * Different Handler maybe has a different handle result , this result class must extends this base class .
  * </p>
@@ -29,36 +29,49 @@ public abstract class HandleResult implements IHandleResult {
     private String mTag;
     private View mTargetView;
     private Activity mActivity;
+    private IHookHandler mHandler;
     private long mCreateTime;
 
 
     /**
-     * @see #HandleResult(Activity,View, String,long)
+     * @see #HandleResult(View, String, long)
      */
-    protected HandleResult(Activity activity,View target,String tag) {
-        this(activity,target,tag, System.currentTimeMillis());
+    protected HandleResult(View target, String tag) {
+        this(target, tag, System.currentTimeMillis());
     }
 
     /**
-     * @param target the target View that the handler is observing with .
-     * @param tag hook handler tag ,used to distinguish the other handler
+     * @param target     the target View that the handler is observing with .
+     * @param tag        hook handler tag ,used to distinguish the other handler
      * @param createTime the timestamp when this result is created
      */
-    protected HandleResult(Activity activity,View target, String tag, long createTime) {
-        mTag=tag;
-        mActivity=activity;
+    protected HandleResult(View target, String tag, long createTime) {
+        mTag = tag;
         mTargetView = target;
         mCreateTime = createTime;
     }
 
+    public void setHandler(IHookHandler handler) {
+        mHandler = handler;
+    }
+
+    public void setActivity(Activity activity) {
+        mActivity = activity;
+    }
+
     @Override
-    public String getTag(){
+    public String getTag() {
         return mTag;
     }
 
     @Override
     public Activity getActivity() {
         return mActivity;
+    }
+
+    @Override
+    public IHookHandler getHandler() {
+        return mHandler;
     }
 
     @Override
@@ -97,11 +110,33 @@ public abstract class HandleResult implements IHandleResult {
      *
      * @param receiver not null,use for receive any result . put(key,value);
      */
-    protected abstract void dumpResultImpl(Map<String, Object> receiver);
+    protected void dumpResultImpl(Map<String, Object> receiver) {
+        receiver.put("actionType", getTag());
+        View target = getTargetView();
+        if (target != null) {
+            String viewName = target.getClass().getSimpleName();
+            receiver.put("viewName", viewName);
+            int id = target.getId();
+            Resources res = (id == View.NO_ID || target.getContext() == null) ? null : target.getContext().getResources();
+            if (res != null) {
+                String viewIdName = res.getResourceEntryName(id);
+                String viewIdValue = "0x" + Integer.toHexString(id);
+                receiver.put("viewIdName", viewIdName);
+                receiver.put("viewId", viewIdValue);
+            }
+        }
+    }
 
     @Override
     public String toString() {
         return toShortString(null).toString();
+    }
+
+    public void destroy() {
+        mTag = null;
+        mHandler = null;
+        mActivity = null;
+        mTargetView = null;
     }
 
     /**
@@ -136,8 +171,8 @@ public abstract class HandleResult implements IHandleResult {
                 .format(new java.util.Date(time));
     }
 
-    public static String formatError(Throwable error){
-        return error==null?"":error.getCause().getMessage();
+    public static String formatError(Throwable error) {
+        return error == null ? "" : error.getCause().getMessage();
     }
 
 }

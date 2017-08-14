@@ -67,9 +67,8 @@ public class HandlerFocus extends HookHandler {
         }
         if (mFocusView != focusView) {
             mFocusView = focusView;
-            Activity activity= mHandlerManager ==null?null: mHandlerManager.getActivity();
             View targetView=focusView == null ? oldFocusView : focusView;
-            reportResult(new ResultFocus(activity,targetView, getTag(), focusView, oldFocusView));
+            reportResult(new ResultFocus(targetView, getTag(), focusView, oldFocusView));
         }
     }
 
@@ -97,8 +96,8 @@ public class HandlerFocus extends HookHandler {
         private View mOldFocusView;
         private View mFocusView;
 
-        private ResultFocus(Activity activity,View target, String tag, View focusView, View oldFocusView) {
-            super(activity,target, tag);
+        private ResultFocus(View target, String tag, View focusView, View oldFocusView) {
+            super(target, tag);
             mFocusView = focusView;
             mOldFocusView = oldFocusView;
         }
@@ -142,10 +141,6 @@ public class HandlerFocus extends HookHandler {
 
         @Override
         protected void dumpResultImpl(Map<String, Object> receiver) {
-            receiver.put("view",getTargetView());
-            receiver.put("time",getTimestamp());
-            receiver.put("focusView",getFocusView());
-            receiver.put("oldFocusView",getOldFocusView());
         }
     }
 }

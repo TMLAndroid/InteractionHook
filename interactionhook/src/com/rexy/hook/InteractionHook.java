@@ -10,6 +10,7 @@ import com.rexy.hook.interfaces.IHandleListener;
 import com.rexy.hook.interfaces.IHandleResult;
 import com.rexy.hook.interfaces.IHookHandler;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -17,10 +18,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Created by rexy on 17/8/13.
  */
-public class InteractionHook {
-    private static List<IHandleListener> sHandleListeners = new CopyOnWriteArrayList();
-    private static WeakHashMap<Activity, HandlerManager> sHandlers = new WeakHashMap();
-    private static Application.ActivityLifecycleCallbacks sLifeCycle = new Application.ActivityLifecycleCallbacks() {
+public abstract class InteractionHook {
+    /**
+     * use for logger debug info
+     */
+    private static final List<IHandleListener> sHandleListeners = new CopyOnWriteArrayList();
+    private static final WeakHashMap<Activity, HandlerManager> sHandlers = new WeakHashMap();
+    private static final Application.ActivityLifecycleCallbacks sLifeCycle = new Application.ActivityLifecycleCallbacks() {
         @Override
         public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
             onCreate(activity);
@@ -51,11 +55,12 @@ public class InteractionHook {
             onDestroy(activity);
         }
     };
+    private static HandlerConfig sConfig;
 
     private static IHandleListener sListenerInner = new IHandleListener() {
         @Override
-        public boolean onHandle(IHookHandler handler, IHandleResult result) {
-            return onReceiveHandleResult(handler, result);
+        public boolean onHandleResult(IHandleResult result) {
+            return onReceiveHandleResult(result);
         }
     };
 
@@ -70,9 +75,46 @@ public class InteractionHook {
         }
     }
 
+    public static void updateConfig(HandlerConfig config) {
+        sConfig = config;
+        if (config != null && sHandlers.size() > 0) {
+            Collection<HandlerManager> collection = sHandlers.values();
+            if (collection != null) {
+                for (HandlerManager handler : collection) {
+                    handler.updateConfig(config);
+                }
+            }
+        }
+    }
+
+    public static HandlerConfig getConfig() {
+        if (sConfig == null) {
+            synchronized (HandlerConfig.class) {
+                if (sConfig == null) {
+                    sConfig = new HandlerConfig();
+                    sConfig.handleFocusEnable = true;
+                    sConfig.handleInputEnable = true;
+                    sConfig.handleInputEnable = true;
+                    sConfig.handleProxyClickEnable = true;
+                    sConfig.handlePreventClickEnable = true;
+                }
+            }
+        }
+        return sConfig;
+    }
+
+    public static HandlerManager getHandlerManager(Activity activity) {
+        return sHandlers.get(activity);
+    }
+
+    public static <T extends IHookHandler> T getHandler(Activity activity, Class<T> cls) {
+        HandlerManager handlerManager = getHandlerManager(activity);
+        return handlerManager == null ? null : handlerManager.getHandler(cls);
+    }
+
     public static void onCreate(Activity activity) {
         if (!sHandlers.containsKey(activity)) {
-            HandlerManager handler=new HandlerManager(activity, true);
+            HandlerManager handler = new HandlerManager(activity, sConfig);
             handler.setHandleListener(sListenerInner);
             sHandlers.put(activity, handler);
         }
@@ -105,14 +147,20 @@ public class InteractionHook {
         sHandleListeners.remove(l);
     }
 
-    private static boolean onReceiveHandleResult(IHookHandler handler, IHandleResult result) {
-        boolean handled=false;
-        for(IHandleListener l :sHandleListeners){
-            if(l.onHandle(handler,result)){
-                handled=true;
+    private static boolean onReceiveHandleResult(IHandleResult result) {
+        boolean handled = false;
+        for (IHandleListener l : sHandleListeners) {
+            if (l.onHandleResult(result)) {
+                handled = true;
                 break;
             }
         }
         return handled;
+    }
+
+    public static void notify(IHandleResult result) {
+        if (result != null) {
+            onReceiveHandleResult(result);
+        }
     }
 }

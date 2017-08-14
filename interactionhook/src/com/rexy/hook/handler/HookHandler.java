@@ -57,7 +57,7 @@ public abstract class HookHandler implements IHookHandler {
 
     @Override
     public void reportError(Throwable error, String category) {
-        reportResult(new ResultError(mHandlerManager ==null?null: mHandlerManager.getActivity(),error, category));
+        reportResult(new ResultError(error, category));
     }
 
     @Override
@@ -83,8 +83,8 @@ public abstract class HookHandler implements IHookHandler {
          */
         String mCategory;
 
-        protected ResultError(Activity activity,Throwable error, String category) {
-            super(activity,null, "error");
+        protected ResultError(Throwable error, String category) {
+            super(null, "error");
             mError = error;
             mCategory = category;
         }

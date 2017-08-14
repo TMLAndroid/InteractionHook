@@ -1,10 +1,10 @@
 package com.rexy.hook;
 
 import android.app.Activity;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
 
+import com.rexy.hook.handler.HandleResult;
 import com.rexy.hook.handler.HandlerFocus;
 import com.rexy.hook.handler.HandlerGesture;
 import com.rexy.hook.handler.HandlerInput;
@@ -26,7 +26,7 @@ import com.rexy.hook.record.TouchTracker;
  * here is a simple example how to use to collect and monitor the use's interaction .
  * </p>
  * <p>
- * before entry process, we need register a global HandlerListener use {@link HandlerManager#setGlobalHandleListener;}
+ * before entry process, we need register a global HandlerListener
  * </p>
  * <p>
  * public class BaseActivity extends FragmentActivity {
@@ -65,82 +65,51 @@ import com.rexy.hook.record.TouchTracker;
 public class HandlerManager {
     private Activity mActivity = null;
     private TouchTracker mTouchTracker;
-    private HandlerPreventFastClick mHandlerFastClick;
+
+    /**
+     * a fast click handler to intercept any continuous twice click event.
+     */
+    private HandlerPreventFastClick mHandlerPreventClick;
+
+    /**
+     * set a handler who is interest in proxy and monitor any View click event ,{@link  android.view.View.OnClickListener}
+     */
     private HandlerProxyClick mHandlerProxyClick;
+    /**
+     * gesture handler to analyze any move gesture.
+     */
     private HandlerGesture mHandlerGesture;
+
+    /**
+     * handler to handle any input by the user,the input event include keyboard code, device menu and so on .
+     */
     private HandlerInput mHandlerInput;
+
+    /**
+     * handler to handle any focus change event,
+     */
     private HandlerFocus mHandlerFocus;
+
     private IHandleListener mHandleListener;
-
-    /**
-     * use for logger debug info
-     */
-    private String mLogTag;
-
-    /**
-     * @see #HandlerManager(Activity, boolean, String)
-     */
-    public HandlerManager(Activity activity, boolean mountHandler) {
-        this(activity, mountHandler, null);
-    }
 
     /**
      * create a hook instance for monitor user interaction
      *
-     * @param activity       current context activity .
-     * @param installHandler whether to install all the feature handler
-     * @param logTag         if not empty the log recorder is available .
+     * @param activity current context activity .
+     * @param config   each handler config for installing and enable or disable  {@link HandlerConfig}
      */
-    public HandlerManager(Activity activity, boolean installHandler, String logTag) {
+    HandlerManager(Activity activity, HandlerConfig config) {
         mActivity = activity;
         ViewGroup rootView = null;
         if (mActivity.getWindow().getDecorView() instanceof ViewGroup) {
             rootView = (ViewGroup) mActivity.getWindow().getDecorView();
         }
         mTouchTracker = new TouchTracker(rootView);
-        if (installHandler) {
-            setHandleFastClickEnable(true);
-            setHandleProxyClickEnable(true);
-            setHandleFocusEnable(true);
-            setHandleInputEnable(true);
-            setHandleGestureEnable(true);
-        }
-        if (logTag != null) {
-            setLogTag(logTag);
-        }
+        updateConfig(config);
     }
 
-    /**
-     * whether the log is allowed to output {@link #mLogTag}
-     *
-     * @return true is allowed to output a log
-     */
-    protected boolean isLogAccess() {
-        return mLogTag != null;
-    }
-
-    /**
-     * set log tag {@link #isLogAccess()}
-     */
-    public void setLogTag(String logTag) {
-        mLogTag = logTag;
-    }
-
-    /**
-     * print log information inner
-     */
-    protected void print(CharSequence category, CharSequence msg) {
-        String tag = mLogTag + "#";
-        if (category == null || msg == null) {
-            msg = category == null ? msg : category;
-        } else {
-            tag = tag + category;
-        }
-        Log.d(tag, String.valueOf(msg));
-    }
-
-    public void setHandleListener(IHandleListener l){
-        mHandleListener=l;
+    public void setHandleListener(IHandleListener l) {
+        mHandleListener = l;
     }
 
     /**
@@ -173,6 +142,78 @@ public class HandlerManager {
         return mTouchTracker.getLastTouchRecord();
     }
 
+    public <T extends IHookHandler> T getHandler(Class<T> cls) {
+        return getHandler(cls, false);
+    }
+
+    protected <T extends IHookHandler> T getHandler(Class<T> cls, boolean createIfNull) {
+        if (cls != null) {
+            if (HandlerPreventFastClick.class.isAssignableFrom(cls)) {
+                if (mHandlerPreventClick == null && createIfNull) {
+                    mHandlerPreventClick = new HandlerPreventFastClick("prevent-click");
+                    dispatchInit(mHandlerPreventClick);
+                }
+                return (T) mHandlerPreventClick;
+            }
+            if (HandlerProxyClick.class.isAssignableFrom(cls)) {
+                if (mHandlerProxyClick == null && createIfNull) {
+                    mHandlerProxyClick = new HandlerProxyClick("click");
+                    dispatchInit(mHandlerProxyClick);
+                }
+                return (T) mHandlerProxyClick;
+            }
+            if (HandlerInput.class.isAssignableFrom(cls)) {
+                if (mHandlerInput == null && createIfNull) {
+                    mHandlerInput = new HandlerInput("input");
+                    dispatchInit(mHandlerInput);
+                }
+                return (T) mHandlerInput;
+            }
+            if (HandlerGesture.class.isAssignableFrom(cls)) {
+                if (mHandlerGesture == null && createIfNull) {
+                    mHandlerGesture = new HandlerGesture("gesture");
+                    mTouchTracker.setHandleDragEnable(true);
+                    dispatchInit(mHandlerGesture);
+                }
+                return (T) mHandlerGesture;
+            }
+            if (HandlerFocus.class.isAssignableFrom(cls)) {
+                if (mHandlerFocus == null && createIfNull) {
+                    mHandlerFocus = new HandlerFocus("focus");
+                    dispatchInit(mHandlerFocus);
+                }
+                return (T) mHandlerFocus;
+            }
+        }
+        return null;
+    }
+
+    public <T extends IHookHandler> T removeHandler(T handler) {
+        T result = null;
+        if (handler == mHandlerFocus) {
+            result = (T) mHandlerFocus;
+            mHandlerFocus = dispatchDestroy(mHandlerFocus);
+        }
+        if (handler == mHandlerInput) {
+            result = (T) mHandlerInput;
+            mHandlerInput = dispatchDestroy(mHandlerInput);
+        }
+        if (handler == mHandlerGesture) {
+            result = (T) mHandlerGesture;
+            mHandlerGesture = dispatchDestroy(mHandlerGesture);
+            mTouchTracker.setHandleDragEnable(false);
+        }
+        if (handler == mHandlerProxyClick) {
+            result = (T) mHandlerProxyClick;
+            mHandlerProxyClick = dispatchDestroy(mHandlerProxyClick);
+        }
+        if (handler == mHandlerPreventClick) {
+            result = (T) mHandlerPreventClick;
+            mHandlerPreventClick = dispatchDestroy(mHandlerPreventClick);
+        }
+        return result;
+    }
+
     private <T extends IHookHandler> T dispatchDestroy(IHookHandler handler) {
         if (handler != null) {
             handler.destroy();
@@ -191,142 +232,24 @@ public class HandlerManager {
         return handler != null && handler.supportHandle();
     }
 
-    /**
-     * set a handler who is interest in proxy and monitor any View click event , {@link HandlerProxyClick},{@link  android.view.View.OnClickListener}
-     */
-    public void setHandleProxyClick(HandlerProxyClick handler) {
-        if (handler != mHandlerProxyClick) {
-            dispatchDestroy(mHandlerProxyClick);
-            mHandlerProxyClick = handler;
-            dispatchInit(handler);
+    public void updateConfig(HandlerConfig config) {
+        if (config != null) {
+            updateHandler(HandlerProxyClick.class, config.installProxyClickHandler, config.handleProxyClickEnable);
+            updateHandler(HandlerPreventFastClick.class, config.installPreventClickHandler, config.handlePreventClickEnable);
+            updateHandler(HandlerInput.class, config.installInputHandler, config.handleInputEnable);
+            updateHandler(HandlerGesture.class, config.installGestureHandler, config.handleGestureEnable);
+            updateHandler(HandlerFocus.class, config.installFocusHandler, config.handleFocusEnable);
         }
     }
 
-    /**
-     * set proxy click handler enable or disable
-     *
-     * @param enable true will ensure the handler is set , it will set a default handler when it is null.
-     */
-    public void setHandleProxyClickEnable(boolean enable) {
-        if (enable && mHandlerProxyClick == null) {
-            setHandleProxyClick(new HandlerProxyClick("proxy-click"));
-        }
-        if (mHandlerProxyClick != null) {
-            mHandlerProxyClick.setHandlerEnable(enable);
-        }
-    }
-
-    /**
-     * set a fast click handler to intercept any continuous twice click event , {@link HandlerPreventFastClick}.
-     */
-    public void setHandleFastClick(HandlerPreventFastClick handler) {
-        if (handler != mHandlerFastClick) {
-            dispatchDestroy(mHandlerFastClick);
-            mHandlerFastClick = handler;
-            dispatchInit(handler);
-        }
-    }
-
-    /**
-     * set fast click handler enable or disable
-     *
-     * @param enable true will ensure the handler is set , it will set a default handler when it is null.
-     */
-    public void setHandleFastClickEnable(boolean enable) {
-        if (enable && mHandlerFastClick == null) {
-            setHandleFastClick(new HandlerPreventFastClick("prevent-click"));
-        }
-        if (mHandlerFastClick != null) {
-            mHandlerFastClick.setHandlerEnable(enable);
-        }
-    }
-
-    /**
-     * set fast click handler disable temporary just at next click event happened .
-     */
-    public void setIgnoreFastClickNextRound() {
-        if (mHandlerFastClick == null) {
-            setHandleFastClickEnable(true);
-        }
-        mHandlerFastClick.setIgnoreNextRound(true);
-    }
-
-    /**
-     * set touch gesture handler to analyze any move gesture ,{@link HandlerGesture}
-     */
-    public void setHandleGesture(HandlerGesture handler) {
-        if (handler != mHandlerGesture) {
-            dispatchDestroy(mHandlerGesture);
-            mHandlerGesture = handler;
-            dispatchInit(handler);
-            mTouchTracker.setHandleDragEnable(handler != null);
-        }
-    }
-
-    /**
-     * set gesture handler enable or disable
-     *
-     * @param enable true will ensure the handler is set , it will set a default handler when it is null.
-     */
-    public void setHandleGestureEnable(boolean enable) {
-        if (enable && mHandlerGesture == null) {
-            setHandleGesture(new HandlerGesture("gesture"));
-        }
-        if (mHandlerGesture != null) {
-            mHandlerGesture.setHandlerEnable(enable);
-            mTouchTracker.setHandleDragEnable(enable);
-        }
-    }
-
-    /**
-     * set input handler to handle any input by the user ,{@link HandlerInput},
-     * the input event include keyboard code, device menu and so on .
-     */
-    public void setHandleInput(HandlerInput handler) {
-        if (handler != mHandlerInput) {
-            dispatchDestroy(mHandlerInput);
-            mHandlerInput = handler;
-            dispatchInit(handler);
-        }
-    }
-
-    /**
-     * set input handler enable or disable
-     *
-     * @param enable true will ensure the handler is set , it will set a default handler when it is null.
-     */
-    public void setHandleInputEnable(boolean enable) {
-        if (enable && mHandlerInput == null) {
-            setHandleInput(new HandlerInput("input"));
-        }
-        if (mHandlerInput != null) {
-            mHandlerInput.setHandlerEnable(enable);
-        }
-    }
-
-    /**
-     * set input handler to handle any focus change event, {@link HandlerFocus},
-     * the input event include keyboard code, device menu and so on .
-     */
-    public void setHandleFocus(HandlerFocus handler) {
-        if (handler != mHandlerFocus) {
-            dispatchDestroy(mHandlerFocus);
-            mHandlerFocus = handler;
-            dispatchInit(handler);
-        }
-    }
-
-    /**
-     * set input handler enable or disable
-     *
-     * @param enable true will ensure the handler is set , it will set a default handler when it is null.
-     */
-    public void setHandleFocusEnable(boolean enable) {
-        if (enable && mHandlerFocus == null) {
-            setHandleFocus(new HandlerFocus("focus"));
-        }
-        if (mHandlerFocus != null) {
-            mHandlerFocus.setHandlerEnable(enable);
+    public void updateHandler(Class<? extends IHookHandler> cls, boolean install, boolean enable) {
+        IHookHandler hookHandler = getHandler(cls, install);
+        if (hookHandler != null) {
+            if (install) {
+                hookHandler.setHandlerEnable(enable);
+            } else {
+                removeHandler(hookHandler);
+            }
         }
     }
 
@@ -342,7 +265,7 @@ public class HandlerManager {
         mTouchTracker.onTouch(ev, action);
         if (MotionEvent.ACTION_DOWN == action) {
             dispatchHandle(mHandlerProxyClick);
-            intercept = dispatchHandle(mHandlerFastClick);
+            intercept = dispatchHandle(mHandlerPreventClick);
         } else {
             if ((MotionEvent.ACTION_UP == action || MotionEvent.ACTION_CANCEL == action)) {
                 dispatchHandle(mHandlerGesture);
@@ -357,7 +280,7 @@ public class HandlerManager {
      */
     public void destroy() {
         mHandlerProxyClick = dispatchDestroy(mHandlerProxyClick);
-        mHandlerFastClick = dispatchDestroy(mHandlerFastClick);
+        mHandlerPreventClick = dispatchDestroy(mHandlerPreventClick);
         mHandlerGesture = dispatchDestroy(mHandlerGesture);
         mHandlerInput = dispatchDestroy(mHandlerInput);
         if (mTouchTracker != null) {
@@ -375,10 +298,11 @@ public class HandlerManager {
      * @return return true to intercept original workflow .
      */
     public boolean onReceiveHandleResult(IHookHandler handler, IHandleResult result) {
-        boolean handled = mHandleListener==null?false:mHandleListener.onHandle(handler,result);
-        if (isLogAccess()) {
-            print(result.getTag(), result.toShortString(null));
+        if (result instanceof HandleResult) {
+            HandleResult hr = (HandleResult) result;
+            hr.setActivity(mActivity);
+            hr.setHandler(handler);
         }
-        return handled;
+        return mHandleListener == null ? false : mHandleListener.onHandleResult(result);
     }
 }

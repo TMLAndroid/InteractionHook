@@ -76,7 +76,7 @@ public class BaseActivity extends FragmentActivity implements IHandleListener {
     }
 
     @Override
-    public boolean onHandle(IHookHandler handler, IHandleResult result) {
+    public boolean onHandleResult(IHandleResult result) {
         mInteractionViewHolder.recordResult(result);
         return false;
     }

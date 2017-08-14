@@ -155,8 +155,7 @@ public class HandlerInput extends HookHandler {
         }
 
         if (header != null) {
-            Activity activity= mHandlerManager ==null?null: mHandlerManager.getActivity();
-            ResultInput result = new ResultInput(activity,edit, getTag(), header.getReferTime());
+            ResultInput result = new ResultInput(edit, getTag(), header.getReferTime());
             long lastTime = header.getReferTime();
             while (header != null) {
                 lastTime = analyzeInputResult(lastTime, header.getReferTime(), header.getKeyRecord(), result);
@@ -242,8 +241,8 @@ public class HandlerInput extends HookHandler {
         private int mValidTimeCount;
 
 
-        private ResultInput(Activity activity,View target, String tag, long startTime) {
-            super(activity,target, tag);
+        private ResultInput(View target, String tag, long startTime) {
+            super(target, tag);
             mStartTime=startTime;
         }
 
@@ -293,13 +292,12 @@ public class HandlerInput extends HookHandler {
 
         @Override
         protected void dumpResultImpl(Map<String, Object> receiver) {
-            receiver.put("view", getTargetView());
-            receiver.put("time", getTimestamp());
-            receiver.put("startTime", getStartTime());
-            receiver.put("text",getText());
+            super.dumpResultImpl(receiver);
+            receiver.put("inputStartTime", getStartTime());
+            receiver.put("inputEndTime", getEndTime());
             receiver.put("inputCount", getInputCount());
             receiver.put("deleteCount", getDeleteCount());
-            receiver.put("speed", getInputSpeed(60 * 1000));
+            receiver.put("inputSpeed", getInputSpeed(60 * 1000));
         }
     }
 }

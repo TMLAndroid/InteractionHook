@@ -23,8 +23,7 @@ public class HandlerGesture extends HookHandler {
     public boolean handle(HandlerManager caller) {
         TouchRecord record = caller.getTouchRecord();
         if (record.isDraggedPossible()) {
-            Activity activity= mHandlerManager ==null?null: mHandlerManager.getActivity();
-            reportResult(new ResultGesture(activity,record,getTag()));
+            reportResult(new ResultGesture(record,getTag()));
             return true;
         }
         return false;
@@ -71,8 +70,8 @@ public class HandlerGesture extends HookHandler {
         private float mFlingY;
 
 
-        private ResultGesture(Activity activity,TouchRecord record, String tag) {
-            super(activity,record.getTargetView(),tag, record.getUpTime());
+        private ResultGesture(TouchRecord record, String tag) {
+            super(record.getTargetView(),tag, record.getUpTime());
             mDownX = record.getDownX();
             mDownY = record.getDownY();
             mDownTime = record.getDownTime();
@@ -191,19 +190,15 @@ public class HandlerGesture extends HookHandler {
 
         @Override
         protected void dumpResultImpl(Map<String, Object> receiver) {
-            receiver.put("view", getTargetView());
-            receiver.put("time", getTimestamp());
+            super.dumpResultImpl(receiver);
             receiver.put("downTime", getDownTime());
             receiver.put("downX", getDownX());
             receiver.put("downY", getDownY());
             receiver.put("upX", getUpX());
             receiver.put("upY", getUpY());
             receiver.put("upTime", getUpTime());
-            receiver.put("deltaTime", getDeltaTime());
             receiver.put("flingX", getFlingX());
             receiver.put("flingY", getFlingY());
-            receiver.put("length", getLength());
-            receiver.put("angle", getAngle());
         }
     }
 }

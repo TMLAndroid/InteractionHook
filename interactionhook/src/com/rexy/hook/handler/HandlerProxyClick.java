@@ -5,6 +5,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
+import android.widget.TextView;
 
 import com.rexy.hook.HandlerManager;
 import com.rexy.hook.interfaces.IProxyClickListener;
@@ -12,7 +13,13 @@ import com.rexy.hook.record.TouchRecord;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+
 
 /**
  * this class use to hook click event of any view .
@@ -53,8 +60,8 @@ public class HandlerProxyClick extends HookHandler {
     IProxyClickListener mInnerClickProxy = new IProxyClickListener() {
         @Override
         public boolean onProxyClick(WrapClickListener wrap, View v) {
-            Activity activity= mHandlerManager ==null?null: mHandlerManager.getActivity();
-            return reportResult(new ResultProxyClick(activity,v, getTag(), mDownX, mDownY,mDownTime));
+            int dataPosition = findRecycleViewPosition(v, v.getTag(mPrivateTagKey));
+            return reportResult(new ResultProxyClick(v, getTag(), mDownX, mDownY, mDownTime, dataPosition));
         }
     };
 
@@ -62,7 +69,7 @@ public class HandlerProxyClick extends HookHandler {
 
     public HandlerProxyClick(String tag) {
         super(tag);
-        mPrivateTagKey=mPrivateTagKey|((0xFFFF)<<24);
+        mPrivateTagKey = mPrivateTagKey | ((0xFFFF) << 24);
     }
 
     /**
@@ -118,9 +125,33 @@ public class HandlerProxyClick extends HookHandler {
                     view.setTag(mPrivateTagKey, recycledContainerDeep);
                 }
             } catch (Exception e) {
-                reportError(e,"hook");
+                reportError(e, "hook");
             }
         }
+    }
+
+    private int findRecycleViewPosition(View host, Object deep) {
+        int deepInt = (deep instanceof Integer) ? (Integer) deep : 0;
+        if (deepInt > 0) {
+            View child = host;
+            ViewGroup parent = (ViewGroup) child.getParent();
+            while (deepInt > 1 && (child.getParent() instanceof ViewGroup)) {
+                child = parent;
+                parent = (ViewGroup) child.getParent();
+            }
+            if (parent instanceof AbsListView) {
+                AbsListView listView = (AbsListView) parent;
+                int firstPosition = listView.getFirstVisiblePosition();
+                if (firstPosition >= 0) {
+                    return firstPosition + listView.indexOfChild(child);
+                }
+            }
+            if (parent instanceof RecyclerView) {
+                RecyclerView recyclerView = (RecyclerView) parent;
+                return recyclerView.getChildLayoutPosition(child);
+            }
+        }
+        return -1;
     }
 
     /**
@@ -172,9 +203,9 @@ public class HandlerProxyClick extends HookHandler {
     public boolean handle(HandlerManager caller) {
         View rootView = caller.getRootView();
         if (rootView != null) {
-            TouchRecord down=caller.getTouchRecord();
-            mDownX=down.getDownX();
-            mDownY=down.getDownY();
+            TouchRecord down = caller.getTouchRecord();
+            mDownX = down.getDownX();
+            mDownY = down.getDownY();
             mDownTime = down.getDownTime();
             hookViews(rootView, 0);
             return true;
@@ -191,13 +222,15 @@ public class HandlerProxyClick extends HookHandler {
     public static class ResultProxyClick extends HandleResult {
         private int mClickX;
         private int mClickY;
+        private int mDataPosition = -1;
         private long mDownTime;
 
-        private ResultProxyClick(Activity activity,View target, String tag, float clickX, float clickY, long downTime) {
-            super(activity,target, tag);
+        private ResultProxyClick(View target, String tag, float clickX, float clickY, long downTime, int dataPosition) {
+            super(target, tag);
             mClickX = (int) clickX;
             mClickY = (int) clickY;
             mDownTime = downTime;
+            mDataPosition = dataPosition;
         }
 
         /**
@@ -221,6 +254,10 @@ public class HandlerProxyClick extends HookHandler {
             return mDownTime;
         }
 
+        public int getDataPosition() {
+            return mDataPosition;
+        }
+
         /**
          * get click touch up timestamp;
          */
@@ -233,18 +270,82 @@ public class HandlerProxyClick extends HookHandler {
             receiver.append(formatView(getTargetView())).append("{");
             receiver.append("clickX=").append(getClickX()).append(',');
             receiver.append("clickY=").append(getClickY()).append(',');
-            receiver.append("downTime=").append(formatTime(getDownTime(),null)).append(',');
-            receiver.append("time=").append(formatTime(getTimestamp(),null)).append(',');
-            receiver.setCharAt(receiver.length()-1,'}');
+            receiver.append("downTime=").append(formatTime(getDownTime(), null)).append(',');
+            receiver.append("time=").append(formatTime(getTimestamp(), null)).append(',');
+            receiver.setCharAt(receiver.length() - 1, '}');
         }
 
         @Override
         protected void dumpResultImpl(Map<String, Object> receiver) {
-            receiver.put("view",getTargetView());
-            receiver.put("time",getTimestamp());
-            receiver.put("downTime", getTimestamp());
-            receiver.put("clickX",getClickX());
-            receiver.put("clickY",getClickY());
+            super.dumpResultImpl(receiver);
+            receiver.put("dataPosition", getDataPosition());
+            receiver.put("clickX", getClickX());
+            receiver.put("clickY", getClickY());
+            receiver.put("timestamp", getUpTime());
+            receiver.put("downTime", getDownTime());
+            View target = getTargetView();
+            if (target != null) {
+                if (target.getParent() instanceof ViewGroup) {
+                    receiver.put("viewPosition", ((ViewGroup) target.getParent()).indexOfChild(target));
+                }
+                int[] position = new int[]{0, 0};
+                target.getLocationOnScreen(position);
+                StringBuilder sb = new StringBuilder();
+                sb.append('(').append(position[0]).append(',').append(position[1]);
+                sb.append(',').append(target.getWidth() + position[0]);
+                sb.append(',').append(target.getHeight() + position[1]).append(')');
+                receiver.put("viewBounds", sb.toString());
+                List<TextView> lables = new ArrayList(8);
+                List<TextView> icons = new ArrayList(4);
+                findAndFillTextView(target, lables);
+                Iterator<TextView> its = lables.iterator();
+  /*              while (its.hasNext()) {
+                    TextView text = its.next();
+                    if (text instanceof IconFontTextView || (text.getTypeface() == GlobalApp.iconFont)) {
+                        its.remove();
+                        icons.add(text);
+                    }
+                }*/
+                Comparator<TextView> comparator = new Comparator<TextView>() {
+                    @Override
+                    public int compare(TextView a, TextView b) {
+                        return (int) (b.getTextSize() - a.getTextSize());
+                    }
+                };
+
+                sb.delete(0, sb.length());
+                dumpText(lables, comparator, sb);
+                dumpText(icons, comparator, sb);
+                if (sb.length() > 0) {
+                    receiver.put("viewText", sb.deleteCharAt(sb.length() - 1).toString());
+                }
+                //receiver.put("eventHandler", "");
+            }
+        }
+
+        private void dumpText(List<TextView> textViews, Comparator<TextView> comparator, StringBuilder sb) {
+            int viewCount = textViews == null ? 0 : textViews.size();
+            if (viewCount > 0) {
+                Collections.sort(textViews, comparator);
+                for (TextView text : textViews) {
+                    sb.append(text.getText()).append(",");
+                }
+            }
+        }
+
+        private void findAndFillTextView(View host, List<TextView> lables) {
+            if (host instanceof TextView) {
+                lables.add((TextView) host);
+            } else if (host instanceof ViewGroup) {
+                ViewGroup parent = (ViewGroup) host;
+                int count = parent.getChildCount();
+                for (int i = 0; i < count; i++) {
+                    View child = parent.getChildAt(i);
+                    if (child.getVisibility() == View.VISIBLE) {
+                        findAndFillTextView(child, lables);
+                    }
+                }
+            }
         }
     }
 }

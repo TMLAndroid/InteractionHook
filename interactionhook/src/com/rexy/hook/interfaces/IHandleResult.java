@@ -24,6 +24,11 @@ public interface IHandleResult {
     Activity getActivity();
 
     /**
+     * get handler who created this result.
+     */
+     IHookHandler getHandler();
+
+    /**
      * get target View for this handle result analyzed with
      */
     View getTargetView();

@@ -84,8 +84,7 @@ public class HandlerPreventFastClick extends HookHandler {
                 if (intercept) {
                     View targetView = pre.getTargetView();
                     if (intercept = clickViewAt(cur.getDownX(), cur.getDownY(), targetView)) {
-                        Activity activity= mHandlerManager ==null?null: mHandlerManager.getActivity();
-                        reportResult(new ResultPreventFastClick(activity,targetView, getTag(), cur, mClickInterval));
+                        reportResult(new ResultPreventFastClick(targetView, getTag(), cur, mClickInterval));
                     }
                 }
                 if (mDynamicAdjustInterval && interval < MAX_CLICK_INTERVAL) {
@@ -98,8 +97,9 @@ public class HandlerPreventFastClick extends HookHandler {
 
     /**
      * judge the given window local position is in the View bounds
-     * @param windowX click position x in window
-     * @param windowY click position y in window
+     *
+     * @param windowX   click position x in window
+     * @param windowY   click position y in window
      * @param clickView last target view who handled the touch event.
      * @return true if this touch down over the last click View.
      */
@@ -167,8 +167,8 @@ public class HandlerPreventFastClick extends HookHandler {
         private int mClickY;
         private int mClickAverageInterval;
 
-        private ResultPreventFastClick(Activity activity,View target, String tag, TouchRecord down, int clickInterval) {
-            super(activity,target, tag, down.getDownTime());
+        private ResultPreventFastClick(View target, String tag, TouchRecord down, int clickInterval) {
+            super(target, tag, down.getDownTime());
             mClickX = (int) down.getDownX();
             mClickY = (int) down.getDownY();
             mClickAverageInterval = clickInterval;
@@ -202,16 +202,11 @@ public class HandlerPreventFastClick extends HookHandler {
             receiver.append("clickY=").append(getClickY()).append(',');
             receiver.append("clickInterval=").append(getClickAverageInterval()).append(',');
             receiver.append("time=").append(formatTime(getTimestamp(), null)).append(',');
-            receiver.setCharAt(receiver.length()-1,'}');
+            receiver.setCharAt(receiver.length() - 1, '}');
         }
 
         @Override
         protected void dumpResultImpl(Map<String, Object> receiver) {
-            receiver.put("view",getTargetView());
-            receiver.put("time",getTimestamp());
-            receiver.put("clickInterval",getClickAverageInterval());
-            receiver.put("clickX",getClickX());
-            receiver.put("clickY",getClickY());
         }
     }
 }
