@@ -89,8 +89,13 @@ public class HandlerInput extends HookHandler {
     public void init(HandlerManager caller, Activity activity) {
         super.init(caller, activity);
         mRootView = caller.getRootView();
-        mRootView.getViewTreeObserver().addOnGlobalFocusChangeListener(mFocusListener);
-        onFocusViewChanged(mRootView.findFocus(), null);
+        if (mRootView != null) {
+            mRootView.getViewTreeObserver().addOnGlobalFocusChangeListener(mFocusListener);
+            View focusView = mRootView.findFocus();
+            if (focusView != null) {
+                onFocusViewChanged(focusView, null);
+            }
+        }
     }
 
     /**
@@ -298,6 +303,12 @@ public class HandlerInput extends HookHandler {
             receiver.put("inputCount", getInputCount());
             receiver.put("deleteCount", getDeleteCount());
             receiver.put("inputSpeed", getInputSpeed(60 * 1000));
+        }
+
+        @Override
+        public void destroy() {
+            super.destroy();
+            mText=null;
         }
     }
 }

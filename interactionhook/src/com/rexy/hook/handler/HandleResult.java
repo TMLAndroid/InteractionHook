@@ -132,6 +132,7 @@ public abstract class HandleResult implements IHandleResult {
         return toShortString(null).toString();
     }
 
+    @Override
     public void destroy() {
         mTag = null;
         mHandler = null;

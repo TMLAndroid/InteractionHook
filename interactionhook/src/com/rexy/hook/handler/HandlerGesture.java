@@ -1,7 +1,5 @@
 package com.rexy.hook.handler;
 
-import android.app.Activity;
-
 import com.rexy.hook.HandlerManager;
 import com.rexy.hook.record.TouchRecord;
 

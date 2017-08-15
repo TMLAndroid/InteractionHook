@@ -55,7 +55,7 @@ public abstract class InteractionHook {
             onDestroy(activity);
         }
     };
-    private static HandlerConfig sConfig;
+    private static InteractionConfig sConfig;
 
     private static IHandleListener sListenerInner = new IHandleListener() {
         @Override
@@ -75,7 +75,7 @@ public abstract class InteractionHook {
         }
     }
 
-    public static void updateConfig(HandlerConfig config) {
+    public static void updateConfig(InteractionConfig config) {
         sConfig = config;
         if (config != null && sHandlers.size() > 0) {
             Collection<HandlerManager> collection = sHandlers.values();
@@ -87,16 +87,22 @@ public abstract class InteractionHook {
         }
     }
 
-    public static HandlerConfig getConfig() {
+    public static InteractionConfig getConfig() {
         if (sConfig == null) {
-            synchronized (HandlerConfig.class) {
+            synchronized (InteractionConfig.class) {
                 if (sConfig == null) {
-                    sConfig = new HandlerConfig();
+                    sConfig = new InteractionConfig();
                     sConfig.handleFocusEnable = true;
                     sConfig.handleInputEnable = true;
-                    sConfig.handleInputEnable = true;
+                    sConfig.handleGestureEnable= true;
                     sConfig.handleProxyClickEnable = true;
                     sConfig.handlePreventClickEnable = true;
+
+                    sConfig.installFocusHandler=true;
+                    sConfig.installInputHandler=true;
+                    sConfig.installGestureHandler=true;
+                    sConfig.installProxyClickHandler=true;
+                    sConfig.installPreventClickHandler=true;
                 }
             }
         }
@@ -155,6 +161,7 @@ public abstract class InteractionHook {
                 break;
             }
         }
+        result.destroy();
         return handled;
     }
 

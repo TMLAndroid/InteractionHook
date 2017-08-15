@@ -7,6 +7,7 @@ import android.view.ViewTreeObserver;
 import android.widget.EditText;
 
 import com.rexy.hook.HandlerManager;
+import com.rexy.hook.InteractionConfig;
 
 import java.util.Map;
 
@@ -45,10 +46,12 @@ public class HandlerFocus extends HookHandler {
     public void init(HandlerManager caller, Activity activity) {
         super.init(caller, activity);
         mRootView = caller.getRootView();
-        mRootView.getViewTreeObserver().addOnGlobalFocusChangeListener(mFocusListener);
-        View focusView = mRootView.findFocus();
-        if (focusView != null) {
-            onFocusViewChanged(focusView, null);
+        if(mRootView!=null){
+            mRootView.getViewTreeObserver().addOnGlobalFocusChangeListener(mFocusListener);
+            View focusView = mRootView.findFocus();
+            if (focusView != null) {
+                onFocusViewChanged(focusView, null);
+            }
         }
     }
 
@@ -67,7 +70,7 @@ public class HandlerFocus extends HookHandler {
         }
         if (mFocusView != focusView) {
             mFocusView = focusView;
-            View targetView=focusView == null ? oldFocusView : focusView;
+            View targetView = focusView == null ? oldFocusView : focusView;
             reportResult(new ResultFocus(targetView, getTag(), focusView, oldFocusView));
         }
     }
@@ -81,7 +84,10 @@ public class HandlerFocus extends HookHandler {
     @Override
     public void destroy() {
         super.destroy();
-        mRootView.getViewTreeObserver().removeOnGlobalFocusChangeListener(mFocusListener);
+        if(mRootView!=null){
+            mRootView.getViewTreeObserver().removeOnGlobalFocusChangeListener(mFocusListener);
+            mRootView=null;
+        }
         mFocusEdit = null;
         mFocusView = null;
         mRootView = null;
@@ -141,6 +147,13 @@ public class HandlerFocus extends HookHandler {
 
         @Override
         protected void dumpResultImpl(Map<String, Object> receiver) {
+        }
+
+        @Override
+        public void destroy() {
+            super.destroy();
+            mOldFocusView=null;
+            mFocusView=null;
         }
     }
 }

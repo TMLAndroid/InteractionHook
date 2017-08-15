@@ -96,9 +96,9 @@ public class HandlerManager {
      * create a hook instance for monitor user interaction
      *
      * @param activity current context activity .
-     * @param config   each handler config for installing and enable or disable  {@link HandlerConfig}
+     * @param config   each handler config for installing and enable or disable  {@link InteractionConfig}
      */
-    HandlerManager(Activity activity, HandlerConfig config) {
+    HandlerManager(Activity activity, InteractionConfig config) {
         mActivity = activity;
         ViewGroup rootView = null;
         if (mActivity.getWindow().getDecorView() instanceof ViewGroup) {
@@ -218,7 +218,7 @@ public class HandlerManager {
         if (handler != null) {
             handler.destroy();
         }
-        return (T) null;
+        return null;
     }
 
     private boolean dispatchHandle(IHookHandler handler) {
@@ -232,13 +232,13 @@ public class HandlerManager {
         return handler != null && handler.supportHandle();
     }
 
-    public void updateConfig(HandlerConfig config) {
+    public void updateConfig(InteractionConfig config) {
         if (config != null) {
-            updateHandler(HandlerProxyClick.class, config.installProxyClickHandler, config.handleProxyClickEnable);
+            updateHandler(HandlerProxyClick.class, config.installProxyClickHandler && InteractionConfig.isHandleAccess, config.handleProxyClickEnable);
             updateHandler(HandlerPreventFastClick.class, config.installPreventClickHandler, config.handlePreventClickEnable);
-            updateHandler(HandlerInput.class, config.installInputHandler, config.handleInputEnable);
-            updateHandler(HandlerGesture.class, config.installGestureHandler, config.handleGestureEnable);
-            updateHandler(HandlerFocus.class, config.installFocusHandler, config.handleFocusEnable);
+            updateHandler(HandlerInput.class, config.installInputHandler && InteractionConfig.isHandleAccess, config.handleInputEnable);
+            updateHandler(HandlerGesture.class, config.installGestureHandler && InteractionConfig.isHandleAccess, config.handleGestureEnable);
+            updateHandler(HandlerFocus.class, config.installFocusHandler && InteractionConfig.isHandleAccess, config.handleFocusEnable);
         }
     }
 
@@ -261,14 +261,16 @@ public class HandlerManager {
      */
     public boolean onTouch(MotionEvent ev) {
         boolean intercept = false;
-        int action = ev.getActionMasked();
-        mTouchTracker.onTouch(ev, action);
-        if (MotionEvent.ACTION_DOWN == action) {
-            dispatchHandle(mHandlerProxyClick);
-            intercept = dispatchHandle(mHandlerPreventClick);
-        } else {
-            if ((MotionEvent.ACTION_UP == action || MotionEvent.ACTION_CANCEL == action)) {
-                dispatchHandle(mHandlerGesture);
+        if (mHandlerPreventClick != null || InteractionConfig.isHandleAccess) {
+            int action = ev.getActionMasked();
+            mTouchTracker.onTouch(ev, action);
+            if (MotionEvent.ACTION_DOWN == action) {
+                dispatchHandle(mHandlerProxyClick);
+                intercept = dispatchHandle(mHandlerPreventClick);
+            } else {
+                if ((MotionEvent.ACTION_UP == action || MotionEvent.ACTION_CANCEL == action)) {
+                    dispatchHandle(mHandlerGesture);
+                }
             }
         }
         return intercept;

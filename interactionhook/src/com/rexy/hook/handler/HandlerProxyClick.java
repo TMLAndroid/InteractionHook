@@ -16,7 +16,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -296,10 +295,10 @@ public class HandlerProxyClick extends HookHandler {
                 sb.append(',').append(target.getHeight() + position[1]).append(')');
                 receiver.put("viewBounds", sb.toString());
                 List<TextView> lables = new ArrayList(8);
-                List<TextView> icons = new ArrayList(4);
+//                List<TextView> icons = new ArrayList(4);
                 findAndFillTextView(target, lables);
-                Iterator<TextView> its = lables.iterator();
-  /*              while (its.hasNext()) {
+/*                Iterator<TextView> its = lables.iterator();
+                while (its.hasNext()) {
                     TextView text = its.next();
                     if (text instanceof IconFontTextView || (text.getTypeface() == GlobalApp.iconFont)) {
                         its.remove();
@@ -315,7 +314,7 @@ public class HandlerProxyClick extends HookHandler {
 
                 sb.delete(0, sb.length());
                 dumpText(lables, comparator, sb);
-                dumpText(icons, comparator, sb);
+//                dumpText(icons, comparator, sb);
                 if (sb.length() > 0) {
                     receiver.put("viewText", sb.deleteCharAt(sb.length() - 1).toString());
                 }

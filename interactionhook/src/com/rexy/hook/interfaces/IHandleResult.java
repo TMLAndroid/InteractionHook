@@ -39,6 +39,8 @@ public interface IHandleResult {
      */
     long getTimestamp();
 
+    void destroy();
+
     /**
      * get short description from all fields of this result
      *

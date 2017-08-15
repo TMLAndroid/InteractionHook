@@ -15,10 +15,8 @@ import android.view.Window;
 import android.widget.Toast;
 
 import com.rexy.example.widget.InteractionFloatViewHolder;
-import com.rexy.hook.InteractionHook;
 import com.rexy.hook.interfaces.IHandleListener;
 import com.rexy.hook.interfaces.IHandleResult;
-import com.rexy.hook.interfaces.IHookHandler;
 
 /**
  * @author: rexy
@@ -33,7 +31,7 @@ public class BaseActivity extends FragmentActivity implements IHandleListener {
     protected void onCreate(Bundle savedInstanceState) {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         super.onCreate(savedInstanceState);
-        InteractionHook.registerHandleListener(this);
+        InteractionReporter.getInstance().registerHandleListener(this);
         mInteractionViewHolder = InteractionFloatViewHolder.getInstance(this);
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         mInteractionViewHolder.updateViewWidth((int) (screenWidth * 0.9f), 0);
@@ -57,13 +55,13 @@ public class BaseActivity extends FragmentActivity implements IHandleListener {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        boolean handled = InteractionHook.onTouch(this, ev);
+        boolean handled = InteractionReporter.getInstance().onTouch(this, ev);
         if (handled) {
             final long now = SystemClock.uptimeMillis();
             MotionEvent cancelEvent = MotionEvent.obtain(now, now,
                     MotionEvent.ACTION_CANCEL, ev.getX(), ev.getY(), 0);
             cancelEvent.setSource(InputDevice.SOURCE_TOUCHSCREEN);
-            InteractionHook.onTouch(this, cancelEvent);
+            InteractionReporter.getInstance().onTouch(this, cancelEvent);
             super.dispatchTouchEvent(cancelEvent);
         }
         return handled || super.dispatchTouchEvent(ev);
@@ -72,7 +70,7 @@ public class BaseActivity extends FragmentActivity implements IHandleListener {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        InteractionHook.unregisterHandleListener(this);
+        InteractionReporter.getInstance().unregisterHandleListener(this);
     }
 
     @Override
