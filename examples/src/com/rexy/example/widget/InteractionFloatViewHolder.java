@@ -2,11 +2,13 @@ package com.rexy.example.widget;
 
 import android.app.Activity;
 import android.content.Context;
+import android.support.v4.util.Pair;
 import android.support.v4.view.ViewCompat;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
@@ -14,13 +16,22 @@ import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import com.rexy.example.extend.InteractionReporter;
 import com.rexy.example.extend.ViewUtils;
+import com.rexy.hook.InteractionConfig;
+import com.rexy.hook.InteractionHook;
+import com.rexy.hook.interfaces.IHandleListener;
 import com.rexy.hook.interfaces.IHandleResult;
 import com.rexy.interactionhook.example.R;
 import com.rexy.widgets.layout.PageScrollView;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * TODO:功能说明
@@ -28,7 +39,7 @@ import java.util.List;
  * @author: rexy
  * @date: 2017-08-07 09:50
  */
-public class InteractionFloatViewHolder extends FloatViewHolder implements View.OnClickListener, CompoundButton.OnCheckedChangeListener {
+public class InteractionFloatViewHolder extends FloatViewHolder implements View.OnClickListener, CompoundButton.OnCheckedChangeListener, IHandleListener {
 
     private static String sEmpty = "";
     private static InteractionFloatViewHolder sHolder;
@@ -45,15 +56,13 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
         return sHolder;
     }
 
-
     View mIcon;
     View mLayoutOption;
     TextView mTextTitle;
     TextView mTextMessage;
     PageScrollView mScrollView;
     boolean mExpanded;
-    List<IHandleResult> mResults = new ArrayList(16);
-
+    private HashMap<String, List<Pair<Long, Map<String, Object>>>> mResults = new HashMap();
     private List<String> mAccepts = new ArrayList(8);
 
     public InteractionFloatViewHolder(View rootView, WindowManager windowManager) {
@@ -62,23 +71,29 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
         mTextMessage = ViewUtils.view(rootView, R.id.message);
         mLayoutOption = ViewUtils.view(rootView, R.id.expanded_menu);
         mIcon = ViewUtils.view(rootView, R.id.icon);
-        mLayoutOption.setVisibility(View.GONE);
+        mLayoutOption.setVisibility(View.INVISIBLE);
         mIcon.setOnClickListener(this);
         ViewUtils.view(rootView, R.id.clean).setOnClickListener(this);
         ViewUtils.view(rootView, R.id.close).setOnClickListener(this);
-        initToggleButton(rootView, R.id.toogleInput);
-        initToggleButton(rootView, R.id.toogleProxyClick);
-        initToggleButton(rootView, R.id.tooglePreventClick);
-        initToggleButton(rootView, R.id.toogleGesture);
-        initToggleButton(rootView, R.id.toogleFocus);
-        initToggleButton(rootView, R.id.toogleError);
+        InteractionConfig config = InteractionHook.getConfig();
+        initToggleButton(rootView, R.id.toogleInput, config.installInputHandler && config.isHandleAccess);
+        initToggleButton(rootView, R.id.toogleProxyClick, config.installProxyClickHandler && config.isHandleAccess);
+        initToggleButton(rootView, R.id.tooglePreventClick, config.installPreventClickHandler);
+        initToggleButton(rootView, R.id.toogleGesture, config.installGestureHandler && config.isHandleAccess);
+        initToggleButton(rootView, R.id.toogleFocus, config.installFocusHandler);
+        initToggleButton(rootView, R.id.toogleError, config.installPreventClickHandler || config.isHandleAccess);
+        initToggleButton(rootView, R.id.tooglePage, config.isHandleAccess);
         mScrollView = ViewUtils.view(rootView, R.id.scrollView);
-        mScrollView.setMaxHeight((int) (rootView.getResources().getDisplayMetrics().heightPixels * 0.35f));
+        mScrollView.setMaxHeight((int) (rootView.getResources().getDisplayMetrics().heightPixels * 0.6f));
+        if (rootView.getLayoutParams() == null) {
+            rootView.setLayoutParams(new ViewGroup.LayoutParams((int) (rootView.getResources().getDisplayMetrics().widthPixels * 0.85f), -2));
+        }
     }
 
-    private void initToggleButton(View rootView, int rid) {
+    private void initToggleButton(View rootView, int rid, boolean checked) {
         ToggleButton button = ViewUtils.view(rootView, rid);
-        onCheckedChanged(button, button.isChecked());
+        button.setChecked(checked);
+        onCheckedChanged(button, checked);
         button.setOnCheckedChangeListener(this);
     }
 
@@ -118,7 +133,6 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
         });
         startAnimWhenStateChanged(!mExpanded, duration);
     }
-
 
     @Override
     public void onClick(View v) {
@@ -161,35 +175,42 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
         mTextTitle.setText(sb);
     }
 
-    private IHandleResult acceptLogger(IHandleResult result) {
-        if (mAccepts.isEmpty()) {
-            return result;
+    private boolean acceptLogger(String tag) {
+        if (mAccepts.isEmpty() || tag == null) {
+            return true;
         }
-        String tag = result.getTag();
         for (String r : mAccepts) {
             if (TextUtils.equals(tag, r)) {
-                return result;
+                return true;
             }
         }
-        return null;
+        return false;
     }
 
-    private void appendLogger(IHandleResult result) {
-        mTextMessage.append(result.getTag());
+    private void appendLogger(String tag, Map<String, Object> params) {
+        mTextMessage.append(tag);
         mTextMessage.append(":");
-        mTextMessage.append(result.toShortString(null));
+        mTextMessage.append(params.toString());
         mTextMessage.append("\n\n");
         if (ViewCompat.canScrollVertically(mScrollView, 1)) {
             mScrollView.scrollTo(0, mTextMessage.getMeasuredHeight(), -1);
         }
+        mTextMessage.requestLayout();
     }
 
-
-    public void recordResult(IHandleResult result) {
-        mResults.add(result);
-        if (acceptLogger(result) != null) {
-            appendLogger(result);
+    @Override
+    public boolean onHandleResult(IHandleResult result) {
+        String tag = result.getTag();
+        if (!mResults.containsKey(tag)) {
+            mResults.put(tag, new ArrayList<Pair<Long, Map<String, Object>>>(8));
         }
+        List<Pair<Long, Map<String, Object>>> list = mResults.get(tag);
+        Map<String, Object> params = InteractionReporter.getInstance().dumpReportParams(result);
+        list.add(Pair.create(result.getTimestamp(), params));
+        if (acceptLogger(tag)) {
+            appendLogger(tag, params);
+        }
+        return false;
     }
 
     @Override
@@ -199,9 +220,24 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
         }
         if (mResults.size() > 0) {
             mTextMessage.setText(sEmpty);
-            for (IHandleResult r : mResults) {
-                if (acceptLogger(r) != null) {
-                    appendLogger(r);
+            ArrayList<Pair<Long, Map<String, Object>>> result = new ArrayList();
+            Iterator<Map.Entry<String, List<Pair<Long, Map<String, Object>>>>> its = mResults.entrySet().iterator();
+            while (its.hasNext()) {
+                Map.Entry<String, List<Pair<Long, Map<String, Object>>>> entry = its.next();
+                if (acceptLogger(entry.getKey())) {
+                    result.addAll(entry.getValue());
+                }
+            }
+            if (result.size() > 0) {
+                Collections.sort(result, new Comparator<Pair<Long, Map<String, Object>>>() {
+                    @Override
+                    public int compare(Pair<Long, Map<String, Object>> l, Pair<Long, Map<String, Object>> r) {
+                        return (int) (l.first - r.first);
+                    }
+                });
+                for (Pair<Long, Map<String, Object>> item : result) {
+                    Map<String, Object> map = item.second;
+                    appendLogger(String.valueOf(map.get("actionType")), map);
                 }
             }
         }
@@ -212,5 +248,14 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
         super.destroy();
         mAccepts.clear();
         mResults.clear();
+    }
+
+    @Override
+    protected void onAttachChanged(boolean attached) {
+        if (attached) {
+            InteractionReporter.getInstance().registerHandleListener(this);
+        } else {
+            InteractionReporter.getInstance().unregisterHandleListener(this);
+        }
     }
 }

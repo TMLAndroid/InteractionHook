@@ -134,7 +134,7 @@ public class HandlerProxyClick extends HookHandler {
         if (deepInt > 0) {
             View child = host;
             ViewGroup parent = (ViewGroup) child.getParent();
-            while (deepInt > 1 && (child.getParent() instanceof ViewGroup)) {
+            while (deepInt-- > 1 && (child.getParent() instanceof ViewGroup)) {
                 child = parent;
                 parent = (ViewGroup) child.getParent();
             }

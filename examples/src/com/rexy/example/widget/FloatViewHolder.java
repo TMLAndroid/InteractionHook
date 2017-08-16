@@ -46,7 +46,7 @@ public abstract class FloatViewHolder {
     }
 
     public void show() {
-        show(-1, -2, 0, mRootView.getResources().getDisplayMetrics().heightPixels-mRootView.getMeasuredHeight());
+        show(-1, -2, 0, 0);
     }
 
     public void hide() {
@@ -64,6 +64,10 @@ public abstract class FloatViewHolder {
 
     public boolean isDestroy() {
         return mRootView == null;
+    }
+
+    public boolean isShown(){
+        return !isDestroy()&&mViewAdded;
     }
 
     public View getRootView() {
@@ -115,23 +119,24 @@ public abstract class FloatViewHolder {
         }
     }
 
-
     private void attachView(int width, int height) {
         if (!mViewAdded && mRootView != null && mWindowManager != null) {
             wmParams = new WindowManager.LayoutParams();
             wmParams.type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && Build.VERSION.SDK_INT < 24 ?
                     WindowManager.LayoutParams.TYPE_TOAST : WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
             wmParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS | WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION;
-            wmParams.gravity = Gravity.TOP|Gravity.CENTER_HORIZONTAL;
+            wmParams.gravity = Gravity.CENTER;
             wmParams.width = width;
             wmParams.height = height;
             mWindowManager.addView(mRootView, wmParams);
             mViewAdded = true;
+            onAttachChanged(true);
         }
     }
 
     private void detachView() {
         if (mViewAdded && mRootView != null && mWindowManager != null) {
+            onAttachChanged(false);
             mWindowManager.removeView(mRootView);
             View touchDragView = getTouchDragView();
             if (touchDragView != null) {
@@ -140,5 +145,8 @@ public abstract class FloatViewHolder {
             mViewAdded = false;
         }
         wmParams = null;
+    }
+
+    protected void onAttachChanged(boolean attached){
     }
 }

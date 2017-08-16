@@ -11,18 +11,20 @@ import android.support.v4.app.FragmentManager;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Toast;
 
 import com.rexy.hook.InteractionConfig;
 import com.rexy.hook.InteractionHook;
+import com.rexy.hook.handler.HandleResult;
 import com.rexy.hook.handler.HandlerGesture;
 import com.rexy.hook.handler.HandlerInput;
+import com.rexy.hook.handler.HandlerPreventFastClick;
 import com.rexy.hook.handler.HandlerProxyClick;
 import com.rexy.hook.interfaces.IHandleListener;
 import com.rexy.hook.interfaces.IHandleResult;
 import com.rexy.interactionhook.example.BuildConfig;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -47,6 +49,18 @@ public class InteractionReporter implements IHandleListener {
         return sReporter;
     }
 
+    public static void setInteractionAccess(boolean installInteractionTrack) {
+        if (InteractionConfig.isDevMode) {
+            installInteractionTrack = true;
+        }
+        if (InteractionConfig.isHandleAccess != installInteractionTrack) {
+            InteractionConfig.isHandleAccess = installInteractionTrack;
+            InteractionHook.updateConfig(InteractionHook.getConfig());
+        }
+    }
+
+    private int mFastClickTimes = 0;
+
     private void log(CharSequence msg) {
         Log.d("rexy_hook", String.valueOf(msg));
     }
@@ -55,8 +69,8 @@ public class InteractionReporter implements IHandleListener {
         InteractionHook.init(application, this);
 
         InteractionConfig config = InteractionHook.getConfig();
-        config.installFocusHandler = false;
-        config.handleFocusEnable = false;
+        config.installFocusHandler = true;
+        config.handleFocusEnable = true;
         InteractionConfig.isDevMode = false;
         InteractionConfig.isHandleAccess = false;
         InteractionHook.updateConfig(config);
@@ -74,14 +88,14 @@ public class InteractionReporter implements IHandleListener {
                 @Override
                 public void onActivityResumed(Activity activity) {
                     if (InteractionConfig.isHandleAccess) {
-                        report(activity, "appear");
+                        reportActivityLifeCycle(activity, "appear");
                     }
                 }
 
                 @Override
                 public void onActivityPaused(Activity activity) {
                     if (InteractionConfig.isHandleAccess) {
-                        report(activity, "disappear");
+                        reportActivityLifeCycle(activity, "disappear");
                     }
                 }
 
@@ -98,17 +112,8 @@ public class InteractionReporter implements IHandleListener {
                 }
             });
         }
-        InteractionConfig.isDevMode = BuildConfig.DEBUG;
-        setInteractionAccess(true);
-    }
-
-    public static void setInteractionAccess(boolean installInteractionTrack) {
-        if (InteractionConfig.isDevMode) {
-            installInteractionTrack = true;
-        }
-        if (InteractionConfig.isHandleAccess != installInteractionTrack) {
-            InteractionConfig.isHandleAccess = installInteractionTrack;
-            InteractionHook.updateConfig(InteractionHook.getConfig());
+        if (BuildConfig.DEBUG) {
+            setInteractionAccess(true);
         }
     }
 
@@ -126,33 +131,56 @@ public class InteractionReporter implements IHandleListener {
 
     public void onResume(Fragment fragment) {
         if (InteractionConfig.isHandleAccess) {
-            report(fragment, "appear", false);
+            InteractionHook.notify(new ResultPage(fragment, "appear", false));
         }
     }
 
     public void onPause(Fragment fragment) {
         if (InteractionConfig.isHandleAccess) {
-            report(fragment, "disappear", false);
+            InteractionHook.notify(new ResultPage(fragment, "disappear", false));
         }
     }
 
     public void onHiddenChanged(Fragment fragment, boolean hidden) {
         if (InteractionConfig.isHandleAccess) {
-            report(fragment, hidden ? "disappear" : "appear", true);
+            InteractionHook.notify(new ResultPage(fragment, hidden ? "disappear" : "appear", true));
+        }
+    }
+
+    private void reportActivityLifeCycle(Activity activity, String eventType) {
+        boolean needReport = !(activity instanceof FragmentActivity);
+        if (!needReport) {
+            FragmentManager manager = ((FragmentActivity) activity).getSupportFragmentManager();
+            List<Fragment> fragments = manager == null ? null : manager.getFragments();
+            needReport = fragments == null || fragments.size() == 0;
+        }
+        if (needReport) {
+            InteractionHook.notify(new ResultPage(activity, eventType, false));
         }
     }
 
     @Override
     public boolean onHandleResult(IHandleResult result) {
-        if (result instanceof HandlerInput.ResultInput ||
+        if (result instanceof HandlerPreventFastClick.ResultPreventFastClick) {
+            mFastClickTimes++;
+            if ((BuildConfig.DEBUG) && mFastClickTimes % 3 == 0) {
+                Toast.makeText(result.getActivity(), "点这么快，手酸吗", Toast.LENGTH_SHORT).show();
+            }
+        }
+        if (result instanceof ResultPage ||
+                result instanceof HandlerInput.ResultInput ||
                 result instanceof HandlerProxyClick.ResultProxyClick ||
                 result instanceof HandlerGesture.ResultGesture) {
             if (InteractionConfig.isHandleAccess) {
-                report(result.getActivity(), null, result.dumpResult(null), result.getTargetView());
+                Map<String, Object> params = dumpReportParams(result);
+                if (InteractionConfig.isDevMode) {
+                    log(params.toString());
+                }
             }
         }
         return false;
     }
+
 
     private Fragment findTopVisibleFragment(FragmentManager fragmentManager) {
         List<Fragment> fragments = fragmentManager == null ? null : fragmentManager.getFragments();
@@ -243,31 +271,15 @@ public class InteractionReporter implements IHandleListener {
         }
     }
 
-    private void report(Activity activity, String eventType) {
-        boolean needReport = !(activity instanceof FragmentActivity);
-        if (!needReport) {
-            FragmentManager manager = ((FragmentActivity) activity).getSupportFragmentManager();
-            List<Fragment> fragments = manager == null ? null : manager.getFragments();
-            needReport = fragments == null || fragments.size() == 0;
+    public Map<String, Object> dumpReportParams(IHandleResult result) {
+        Fragment fragment = null;
+        if (result instanceof ResultPage) {
+            fragment = ((ResultPage) result).getFragment();
         }
-        if (needReport) {
-            HashMap<String, Object> arg = new HashMap();
-            arg.put("actionType", "page");
-            arg.put("eventType", eventType);
-            arg.put("timestamp", System.currentTimeMillis());
-            report(activity, null, arg, null);
-        }
-    }
+        Activity activity = result.getActivity();
+        View targetView = result.getTargetView();
+        Map<String, Object> arg = result.dumpResult(null);
 
-    private void report(Fragment fragment, String eventType, boolean fromHiddenChanged) {
-        HashMap<String, Object> arg = new HashMap();
-        arg.put("actionType", "page");
-        arg.put("eventType", eventType);
-        arg.put("timestamp", System.currentTimeMillis());
-        report(fragment.getActivity(), fragment, arg, fragment.getView());
-    }
-
-    private void report(Activity activity, Fragment fragment, Map<String, Object> arg, View targetView) {
         StringBuilder screenPathBuilder = new StringBuilder();
         List<Fragment> fragments = new ArrayList(2);
         if (fragment == null) {
@@ -290,6 +302,63 @@ public class InteractionReporter implements IHandleListener {
         }
         screenPathBuilder.insert(0, activity.getClass().getSimpleName());
         arg.put("screenPath", screenPathBuilder.toString());
-        log(arg.toString());
+        return arg;
+    }
+
+    public static class ResultPage extends HandleResult {
+        private Fragment mFragment;
+        private String mEventType;
+        private boolean mHiddenChanged;
+
+        protected ResultPage(Fragment fragment, String eventType, boolean hiddenChanged) {
+            super(null, "page");
+            mFragment = fragment;
+            mEventType = eventType;
+            mHiddenChanged = hiddenChanged;
+            if (mFragment != null) {
+                setActivity(mFragment.getActivity());
+            }
+        }
+
+        protected ResultPage(Activity activity, String eventType, boolean hiddenChanged) {
+            super(null, "page");
+            mEventType = eventType;
+            mHiddenChanged = hiddenChanged;
+            setActivity(activity);
+        }
+
+        public Fragment getFragment() {
+            return mFragment;
+        }
+
+        public String getEventType() {
+            return mEventType;
+        }
+
+        public boolean isHiddenChanged() {
+            return mHiddenChanged;
+        }
+
+        @Override
+        protected void toShortStringImpl(StringBuilder receiver) {
+            receiver.append(getFragment()).append("{");
+            receiver.append("eventType=").append(getEventType()).append(',');
+            receiver.append("hiddenChange=").append(isHiddenChanged()).append(',');
+            receiver.append("timestamp=").append(formatTime(getTimestamp(), null)).append(',');
+            receiver.setCharAt(receiver.length() - 1, '}');
+        }
+
+        @Override
+        protected void dumpResultImpl(Map<String, Object> receiver) {
+            super.dumpResultImpl(receiver);
+            receiver.put("eventType", getEventType());
+            receiver.put("timestamp", getTimestamp());
+        }
+
+        @Override
+        public void destroy() {
+            super.destroy();
+            mFragment = null;
+        }
     }
 }

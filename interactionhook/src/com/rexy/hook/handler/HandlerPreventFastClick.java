@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.util.SparseIntArray;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.ViewGroup;
 
 import com.rexy.hook.HandlerManager;
 import com.rexy.hook.record.TouchRecord;
@@ -207,6 +208,23 @@ public class HandlerPreventFastClick extends HookHandler {
 
         @Override
         protected void dumpResultImpl(Map<String, Object> receiver) {
+            super.dumpResultImpl(receiver);
+            receiver.put("clickX", getClickX());
+            receiver.put("clickY", getClickY());
+            receiver.put("timestamp", getTimestamp());
+            View target = getTargetView();
+            if (target != null) {
+                if (target.getParent() instanceof ViewGroup) {
+                    receiver.put("viewPosition", ((ViewGroup) target.getParent()).indexOfChild(target));
+                }
+                int[] position = new int[]{0, 0};
+                target.getLocationOnScreen(position);
+                StringBuilder sb = new StringBuilder();
+                sb.append('(').append(position[0]).append(',').append(position[1]);
+                sb.append(',').append(target.getWidth() + position[0]);
+                sb.append(',').append(target.getHeight() + position[1]).append(')');
+                receiver.put("viewBounds", sb.toString());
+            }
         }
     }
 }

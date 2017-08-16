@@ -305,6 +305,8 @@ public class HandlerManager {
             hr.setActivity(mActivity);
             hr.setHandler(handler);
         }
-        return mHandleListener == null ? false : mHandleListener.onHandleResult(result);
+        boolean handled = mHandleListener == null ? false : mHandleListener.onHandleResult(result);
+        result.destroy();
+        return handled;
     }
 }

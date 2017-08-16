@@ -7,7 +7,6 @@ import android.view.ViewTreeObserver;
 import android.widget.EditText;
 
 import com.rexy.hook.HandlerManager;
-import com.rexy.hook.InteractionConfig;
 
 import java.util.Map;
 
@@ -147,6 +146,21 @@ public class HandlerFocus extends HookHandler {
 
         @Override
         protected void dumpResultImpl(Map<String, Object> receiver) {
+            super.dumpResultImpl(receiver);
+            receiver.put("timestamp", getTimestamp());
+            View target = getTargetView();
+            if (target != null) {
+                if (target.getParent() instanceof ViewGroup) {
+                    receiver.put("viewPosition", ((ViewGroup) target.getParent()).indexOfChild(target));
+                }
+                int[] position = new int[]{0, 0};
+                target.getLocationOnScreen(position);
+                StringBuilder sb = new StringBuilder();
+                sb.append('(').append(position[0]).append(',').append(position[1]);
+                sb.append(',').append(target.getWidth() + position[0]);
+                sb.append(',').append(target.getHeight() + position[1]).append(')');
+                receiver.put("viewBounds", sb.toString());
+            }
         }
 
         @Override

@@ -15,36 +15,40 @@ import android.view.Window;
 import android.widget.Toast;
 
 import com.rexy.example.widget.InteractionFloatViewHolder;
-import com.rexy.hook.interfaces.IHandleListener;
-import com.rexy.hook.interfaces.IHandleResult;
 
 /**
  * @author: rexy
  * @date: 2017-06-05 14:45
  */
-public class BaseActivity extends FragmentActivity implements IHandleListener {
-    //真正使用不是让 BaseActivity 去监听IHandleListener，设置个全局的监听就可以。
-    //本例是为了在弹出浮层上适时显示监听结果。
-    protected InteractionFloatViewHolder mInteractionViewHolder;
+public class BaseActivity extends FragmentActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         super.onCreate(savedInstanceState);
-        InteractionReporter.getInstance().registerHandleListener(this);
-        mInteractionViewHolder = InteractionFloatViewHolder.getInstance(this);
-        int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        mInteractionViewHolder.updateViewWidth((int) (screenWidth * 0.9f), 0);
-        if (PermissionChecker.PERMISSION_GRANTED == PermissionChecker.checkSelfPermission(this, Manifest.permission.SYSTEM_ALERT_WINDOW)) {
-            mInteractionViewHolder.show();
-        } else {
-            if (Build.VERSION.SDK_INT > 23 && !Settings.canDrawOverlays(BaseActivity.this)) {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:" + getPackageName()));
-                startActivityForResult(intent, 1000);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (!InteractionFloatViewHolder.getInstance(this).isShown()) {
+            boolean showFloatView = false;
+            if (PermissionChecker.PERMISSION_GRANTED == PermissionChecker.checkSelfPermission(this, Manifest.permission.SYSTEM_ALERT_WINDOW)) {
+                showFloatView = true;
             } else {
+                if (Build.VERSION.SDK_INT > 23 && !Settings.canDrawOverlays(BaseActivity.this)) {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:" + getPackageName()));
+                    startActivityForResult(intent, 1000);
+                } else {
+                    showFloatView = true;
+
+                }
+            }
+            if (showFloatView) {
                 try {
-                    mInteractionViewHolder.show();
+                    InteractionFloatViewHolder.getInstance(this).show();
+                    InteractionFloatViewHolder.getInstance(this).updateViewWidth((int) (getResources().getDisplayMetrics().widthPixels * 0.9f), 0);
                 } catch (Exception e) {
                     e.printStackTrace();
                     Toast.makeText(this, "require SYSTEM_ALERT_WINDOW permission", Toast.LENGTH_SHORT).show();
@@ -65,17 +69,5 @@ public class BaseActivity extends FragmentActivity implements IHandleListener {
             super.dispatchTouchEvent(cancelEvent);
         }
         return handled || super.dispatchTouchEvent(ev);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        InteractionReporter.getInstance().unregisterHandleListener(this);
-    }
-
-    @Override
-    public boolean onHandleResult(IHandleResult result) {
-        mInteractionViewHolder.recordResult(result);
-        return false;
     }
 }

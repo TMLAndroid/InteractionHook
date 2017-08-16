@@ -80,17 +80,17 @@
             android:id="@+id/toogleProxyClick"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:tag="proxy-click"
-            android:textOff="proxy-click"
-            android:textOn="proxy-click" />
+            android:tag="click"
+            android:textOff="click"
+            android:textOn="click" />
 
         <ToggleButton
             android:id="@+id/tooglePreventClick"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:tag="prevent-click"
-            android:textOff="prevent-click"
-            android:textOn="prevent-click" />
+            android:textOff="prevent"
+            android:textOn="prevent" />
 
         <ToggleButton
             android:id="@+id/toogleGesture"
@@ -123,6 +123,14 @@
             android:tag="error"
             android:textOff="error"
             android:textOn="error" />
+
+        <ToggleButton
+            android:id="@+id/tooglePage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:tag="page"
+            android:textOff="page"
+            android:textOn="page" />
     </com.rexy.widgets.layout.WrapLayout>
 
 </FrameLayout>

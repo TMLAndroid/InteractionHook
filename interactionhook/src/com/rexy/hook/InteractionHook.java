@@ -94,7 +94,7 @@ public abstract class InteractionHook {
                     sConfig = new InteractionConfig();
                     sConfig.handleFocusEnable = true;
                     sConfig.handleInputEnable = true;
-                    sConfig.handleGestureEnable= true;
+                    sConfig.handleGestureEnable = true;
                     sConfig.handleProxyClickEnable = true;
                     sConfig.handlePreventClickEnable = true;
 
@@ -161,13 +161,13 @@ public abstract class InteractionHook {
                 break;
             }
         }
-        result.destroy();
         return handled;
     }
 
     public static void notify(IHandleResult result) {
         if (result != null) {
             onReceiveHandleResult(result);
+            result.destroy();
         }
     }
 }

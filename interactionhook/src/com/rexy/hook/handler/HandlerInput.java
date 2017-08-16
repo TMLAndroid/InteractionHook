@@ -32,6 +32,7 @@ public class HandlerInput extends HookHandler {
      */
     private InputRecord mRecordHeader;
     private InputRecord mRecordPointer;
+    private InputRecord mRecordTemp;
 
     private static int sTimeMaxInterval = 1000 * 5;
 
@@ -56,14 +57,22 @@ public class HandlerInput extends HookHandler {
         @Override
         public void onTextChanged(CharSequence s, int start, int before, int count) {
             if (before == 0 || count == 0) {
+                int added = before == 0 ? count : -before;
+                long time = System.currentTimeMillis();
                 if (before > 1 && (s == null || s.length() == 0)) {
+                    if (mRecordPointer == null && mRecordTemp == null) {
+                        mRecordTemp = InputRecord.obtain(mEditText, time);
+                        mRecordTemp.record(time, added, s);
+                    }
                     return;
                 }
                 if (count > 1 && s != null && count == s.length()) {
+                    if (mRecordPointer == null && mRecordTemp == null) {
+                        mRecordTemp = InputRecord.obtain(mEditText, time);
+                        mRecordTemp.record(time, added, s);
+                    }
                     return;
                 }
-                int added = before == 0 ? count : -before;
-                long time = System.currentTimeMillis();
                 if (mRecordHeader == null && mRecordPointer == null) {
                     mRecordPointer = mRecordHeader = InputRecord.obtain(mEditText, time);
                 } else {
@@ -72,7 +81,11 @@ public class HandlerInput extends HookHandler {
                         mRecordPointer = mRecordPointer.mNext;
                     }
                 }
-                mRecordPointer.record(time, added,s);
+                mRecordPointer.record(time, added, s);
+                if (mRecordTemp != null) {
+                    mRecordTemp.recycle();
+                    mRecordTemp = null;
+                }
             }
         }
 
@@ -101,7 +114,7 @@ public class HandlerInput extends HookHandler {
     /**
      * call when the focus view changed in this window
      *
-     * @param focusView new focus View
+     * @param focusView    new focus View
      * @param oldFocusView old focus View may be null
      */
     private void onFocusViewChanged(View focusView, View oldFocusView) {
@@ -114,6 +127,10 @@ public class HandlerInput extends HookHandler {
                 mEditText = edit;
             }
         }
+        if (mRecordTemp != null && mRecordHeader == null) {
+            mRecordHeader = mRecordTemp;
+        }
+        mRecordTemp = null;
         if (mRecordHeader != null) {
             if ((oldFocusView instanceof EditText) || (focusView == null && oldFocusView == mRootView)) {
                 InputRecord header = mRecordHeader;
@@ -164,7 +181,7 @@ public class HandlerInput extends HookHandler {
             long lastTime = header.getReferTime();
             while (header != null) {
                 lastTime = analyzeInputResult(lastTime, header.getReferTime(), header.getKeyRecord(), result);
-                result.mText=header.getText();
+                result.mText = header.getText();
                 header = header.recycle();
             }
             reportResult(result);
@@ -248,14 +265,15 @@ public class HandlerInput extends HookHandler {
 
         private ResultInput(View target, String tag, long startTime) {
             super(target, tag);
-            mStartTime=startTime;
+            mStartTime = startTime;
         }
 
         /**
          * get the latest text of the target EditText
+         *
          * @return
          */
-        public CharSequence getText(){
+        public CharSequence getText() {
             return mText;
         }
 
@@ -289,7 +307,7 @@ public class HandlerInput extends HookHandler {
             receiver.append("text=").append(getText()).append(',');
             receiver.append("input=").append(getInputCount()).append(',');
             receiver.append("delete=").append(getDeleteCount()).append(',');
-            receiver.append("speed=").append((int)getInputSpeed(60 * 1000)).append(',');
+            receiver.append("speed=").append((int) getInputSpeed(60 * 1000)).append(',');
             receiver.append("startTime=").append(formatTime(getStartTime(), null)).append(',');
             receiver.append("time=").append(formatTime(getTimestamp(), null)).append(',');
             receiver.setCharAt(receiver.length() - 1, '}');
@@ -298,6 +316,7 @@ public class HandlerInput extends HookHandler {
         @Override
         protected void dumpResultImpl(Map<String, Object> receiver) {
             super.dumpResultImpl(receiver);
+            receiver.put("text", getText());
             receiver.put("inputStartTime", getStartTime());
             receiver.put("inputEndTime", getEndTime());
             receiver.put("inputCount", getInputCount());
@@ -308,7 +327,7 @@ public class HandlerInput extends HookHandler {
         @Override
         public void destroy() {
             super.destroy();
-            mText=null;
+            mText = null;
         }
     }
 }
