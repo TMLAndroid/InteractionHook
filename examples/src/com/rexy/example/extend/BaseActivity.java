@@ -31,7 +31,7 @@ public class BaseActivity extends FragmentActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        if (!InteractionFloatViewHolder.getInstance(this).isShown()) {
+        if (!InteractionFloatViewHolder.getInstance(MyApplication.getApp()).isShown()) {
             boolean showFloatView = false;
             if (PermissionChecker.PERMISSION_GRANTED == PermissionChecker.checkSelfPermission(this, Manifest.permission.SYSTEM_ALERT_WINDOW)) {
                 showFloatView = true;

@@ -77,7 +77,8 @@
         android:background="#33FF0000">
 
         <ToggleButton
-            android:id="@+id/toogleProxyClick"
+            android:textColor="@color/select_tab_item_text"
+            android:id="@+id/toggleProxyClick"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:tag="click"
@@ -85,7 +86,8 @@
             android:textOn="click" />
 
         <ToggleButton
-            android:id="@+id/tooglePreventClick"
+            android:textColor="@color/select_tab_item_text"
+            android:id="@+id/togglePreventClick"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:tag="prevent-click"
@@ -93,7 +95,8 @@
             android:textOn="prevent" />
 
         <ToggleButton
-            android:id="@+id/toogleGesture"
+            android:textColor="@color/select_tab_item_text"
+            android:id="@+id/toggleGesture"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:tag="gesture"
@@ -101,7 +104,8 @@
             android:textOn="gesture" />
 
         <ToggleButton
-            android:id="@+id/toogleInput"
+            android:textColor="@color/select_tab_item_text"
+            android:id="@+id/toggleInput"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:tag="input"
@@ -109,7 +113,7 @@
             android:textOn="input" />
 
         <ToggleButton
-            android:id="@+id/toogleFocus"
+            android:id="@+id/toggleFocus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:tag="focus"
@@ -117,7 +121,8 @@
             android:textOn="focus" />
 
         <ToggleButton
-            android:id="@+id/toogleError"
+            android:textColor="@color/select_tab_item_text"
+            android:id="@+id/toggleError"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:tag="error"
@@ -125,7 +130,8 @@
             android:textOn="error" />
 
         <ToggleButton
-            android:id="@+id/tooglePage"
+            android:textColor="@color/select_tab_item_text"
+            android:id="@+id/togglePage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:tag="page"

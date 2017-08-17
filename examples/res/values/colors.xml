@@ -1,10 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="titleBackground">#2B2B2B</color>
-    <color name="windowBackground">#F2F2F2</color>
+
+    <color name="windowBackground">#F2F4F7</color>
     <color name="contentBackground">#FFFFFF</color>
-    <color name="partBackground">#B9BCC0</color>
-    <color name="optionBackground">#646566</color>
-    <color name="itemBackground">#3C3F41</color>
+    <color name="optionBackground">#FAFAFA</color>
+    <color name="partBackground">#ECECEC</color>
+
+    <color name="textMain">#1D1D1D</color>
+    <color name="textMinor">#353535</color>
+    <color name="textSubsidiary">#929DA4</color>
+
+
+
+
     <color name="textButton">#edf2f6</color>
+
+    <color name="fuzzyRed">#D4696A</color>
+    <color name="waterMelon">#F9636E</color>
+    <color name="flamingo">#F05330</color>
+    <color name="deepCerise">#D62E79</color>
+
+    <color name="chelseaCucumber">#8DAF50</color>
+    <color name="kellyGreen">#4BBE2C</color>
+    <color name="chateauGreen">#32A148</color>
+    <color name="vidaLocal">#5D9331</color>
+    <color name="woodLand">#616D49</color>
+    <color name="teal">#02847A</color>
+
+
+    <color name="cronFlower">#96D4E9</color>
+    <color name="airForceBlue">#5B86A9</color>
+    <color name="summerSkyBlue">#29B5EA</color>
+    <color name="pictonBlue">#4FA1EA</color>
+    <color name="curiousBlue">#2E84D4</color>
+    <color name="middleNightBlue">#184983</color>
+
+    <color name="coralCandy">#F1CFC6</color>
+    <color name="cashMere">#D7AC99</color>
+    <color name="brightSun">#FDC93E</color>
+    <color name="orangeYellow">#FAD064</color>
 </resources>

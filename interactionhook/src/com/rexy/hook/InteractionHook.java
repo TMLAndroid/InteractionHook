@@ -27,11 +27,11 @@ public abstract class InteractionHook {
     private static final Application.ActivityLifecycleCallbacks sLifeCycle = new Application.ActivityLifecycleCallbacks() {
         @Override
         public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
-            onCreate(activity);
         }
 
         @Override
         public void onActivityStarted(Activity activity) {
+            attachHandlerManager(activity);
         }
 
         @Override
@@ -119,6 +119,14 @@ public abstract class InteractionHook {
     }
 
     public static void onCreate(Activity activity) {
+        attachHandlerManager(activity);
+    }
+
+    public static void onDestroy(Activity activity) {
+        detachHandlerManager(activity);
+    }
+
+    private static void attachHandlerManager(Activity activity) {
         if (!sHandlers.containsKey(activity)) {
             HandlerManager handler = new HandlerManager(activity, sConfig);
             handler.setHandleListener(sListenerInner);
@@ -126,7 +134,7 @@ public abstract class InteractionHook {
         }
     }
 
-    public static void onDestroy(Activity activity) {
+    private static void detachHandlerManager(Activity activity) {
         if (sHandlers.containsKey(activity)) {
             HandlerManager manager = sHandlers.get(activity);
             if (manager != null) {

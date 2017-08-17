@@ -2,6 +2,8 @@ package com.rexy.example.extend;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.Context;
+import android.content.ContextWrapper;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
@@ -181,6 +183,17 @@ public class InteractionReporter implements IHandleListener {
         return false;
     }
 
+    private   Activity findActivity(Context context) {
+        while (true) {
+            if (context instanceof Activity) {
+                return (Activity) context;
+            } else if (context instanceof ContextWrapper) {
+                context = ((ContextWrapper) context).getBaseContext();
+            } else {
+                return null;
+            }
+        }
+    }
 
     private Fragment findTopVisibleFragment(FragmentManager fragmentManager) {
         List<Fragment> fragments = fragmentManager == null ? null : fragmentManager.getFragments();
@@ -276,32 +289,38 @@ public class InteractionReporter implements IHandleListener {
         if (result instanceof ResultPage) {
             fragment = ((ResultPage) result).getFragment();
         }
+        Map<String, Object> arg = result.dumpResult(null);
         Activity activity = result.getActivity();
         View targetView = result.getTargetView();
-        Map<String, Object> arg = result.dumpResult(null);
-
-        StringBuilder screenPathBuilder = new StringBuilder();
-        List<Fragment> fragments = new ArrayList(2);
-        if (fragment == null) {
-            if (targetView != null) {
-                dumpFragmentPathFromActivity(activity, targetView, fragments);
+        if(activity!=null||targetView!=null){
+            if(activity==null){
+                activity=findActivity(targetView.getContext());
             }
-        } else {
-            dumpFragmentPathFromFragment(fragment, fragments);
+            StringBuilder screenPathBuilder = new StringBuilder();
+            List<Fragment> fragments = new ArrayList(2);
+            if (fragment == null) {
+                if (targetView != null && activity != null) {
+                    dumpFragmentPathFromActivity(activity, targetView, fragments);
+                }
+            } else {
+                dumpFragmentPathFromFragment(fragment, fragments);
+            }
+            int size = fragments.size();
+            if (size > 0) {
+                arg.put("screenId", System.identityHashCode(fragments.get(size - 1)));
+            } else {
+                arg.put("screenId", activity == null ? 0 : System.identityHashCode(activity));
+            }
+            for (int i = size - 1; i >= 0; i--) {
+                fragment = fragments.get(i);
+                screenPathBuilder.insert(0, fragment.getClass().getSimpleName());
+                screenPathBuilder.insert(0, '>');
+            }
+            if (activity != null) {
+                screenPathBuilder.insert(0, activity.getClass().getSimpleName());
+            }
+            arg.put("screenPath", screenPathBuilder.toString());
         }
-        int size = fragments.size();
-        if (size > 0) {
-            arg.put("screenId", System.identityHashCode(fragments.get(size - 1)));
-        } else {
-            arg.put("screenId", System.identityHashCode(activity));
-        }
-        for (int i = size - 1; i >= 0; i--) {
-            fragment = fragments.get(i);
-            screenPathBuilder.insert(0, fragment.getClass().getSimpleName());
-            screenPathBuilder.insert(0, '>');
-        }
-        screenPathBuilder.insert(0, activity.getClass().getSimpleName());
-        arg.put("screenPath", screenPathBuilder.toString());
         return arg;
     }
 

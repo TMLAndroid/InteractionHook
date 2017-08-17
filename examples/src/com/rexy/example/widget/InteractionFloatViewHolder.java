@@ -44,12 +44,12 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
     private static String sEmpty = "";
     private static InteractionFloatViewHolder sHolder;
 
-    public static InteractionFloatViewHolder getInstance(Activity activity) {
+    public static InteractionFloatViewHolder getInstance(Context context) {
         if (sHolder == null || sHolder.isDestroy()) {
             synchronized (InteractionFloatViewHolder.class) {
                 if (sHolder == null || sHolder.isDestroy()) {
-                    sHolder = new InteractionFloatViewHolder(LayoutInflater.from(activity).inflate(R.layout.float_view_interaction, null, false)
-                            , (WindowManager) activity.getSystemService(Context.WINDOW_SERVICE));
+                    sHolder = new InteractionFloatViewHolder(LayoutInflater.from(context).inflate(R.layout.float_view_interaction, null, false)
+                            , (WindowManager) context.getSystemService(Context.WINDOW_SERVICE));
                 }
             }
         }
@@ -61,6 +61,7 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
     TextView mTextTitle;
     TextView mTextMessage;
     PageScrollView mScrollView;
+    private StringBuilder mLogger = new StringBuilder(1024);
     boolean mExpanded;
     private HashMap<String, List<Pair<Long, Map<String, Object>>>> mResults = new HashMap();
     private List<String> mAccepts = new ArrayList(8);
@@ -76,13 +77,13 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
         ViewUtils.view(rootView, R.id.clean).setOnClickListener(this);
         ViewUtils.view(rootView, R.id.close).setOnClickListener(this);
         InteractionConfig config = InteractionHook.getConfig();
-        initToggleButton(rootView, R.id.toogleInput, config.installInputHandler && config.isHandleAccess);
-        initToggleButton(rootView, R.id.toogleProxyClick, config.installProxyClickHandler && config.isHandleAccess);
-        initToggleButton(rootView, R.id.tooglePreventClick, config.installPreventClickHandler);
-        initToggleButton(rootView, R.id.toogleGesture, config.installGestureHandler && config.isHandleAccess);
-        initToggleButton(rootView, R.id.toogleFocus, config.installFocusHandler);
-        initToggleButton(rootView, R.id.toogleError, config.installPreventClickHandler || config.isHandleAccess);
-        initToggleButton(rootView, R.id.tooglePage, config.isHandleAccess);
+        initToggleButton(rootView, R.id.toggleInput, config.installInputHandler && config.isHandleAccess);
+        initToggleButton(rootView, R.id.toggleProxyClick, config.installProxyClickHandler && config.isHandleAccess);
+        initToggleButton(rootView, R.id.togglePreventClick, config.installPreventClickHandler);
+        initToggleButton(rootView, R.id.toggleGesture, config.installGestureHandler && config.isHandleAccess);
+        initToggleButton(rootView, R.id.toggleFocus, config.installFocusHandler);
+        initToggleButton(rootView, R.id.toggleError, config.installPreventClickHandler || config.isHandleAccess);
+        initToggleButton(rootView, R.id.togglePage, config.isHandleAccess);
         mScrollView = ViewUtils.view(rootView, R.id.scrollView);
         mScrollView.setMaxHeight((int) (rootView.getResources().getDisplayMetrics().heightPixels * 0.6f));
         if (rootView.getLayoutParams() == null) {
@@ -146,6 +147,7 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
         if (id == R.id.clean) {
             mTextMessage.setText(sEmpty);
             mResults.clear();
+            mLogger.delete(0, mLogger.length());
         }
     }
 
@@ -188,14 +190,19 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
     }
 
     private void appendLogger(String tag, Map<String, Object> params) {
-        mTextMessage.append(tag);
-        mTextMessage.append(":");
-        mTextMessage.append(params.toString());
-        mTextMessage.append("\n\n");
+        mLogger.insert(0, "\n\n");
+        mLogger.insert(0, params.toString());
+        mLogger.insert(0, ':');
+        mLogger.insert(0, tag);
+        mTextMessage.setText(mLogger);
         if (ViewCompat.canScrollVertically(mScrollView, 1)) {
-            mScrollView.scrollTo(0, mTextMessage.getMeasuredHeight(), -1);
+            mScrollView.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mScrollView.scrollTo(0, 0, -1);
+                }
+            }, 16);
         }
-        mTextMessage.requestLayout();
     }
 
     @Override
@@ -220,6 +227,7 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
         }
         if (mResults.size() > 0) {
             mTextMessage.setText(sEmpty);
+            mLogger.delete(0,mLogger.length());
             ArrayList<Pair<Long, Map<String, Object>>> result = new ArrayList();
             Iterator<Map.Entry<String, List<Pair<Long, Map<String, Object>>>>> its = mResults.entrySet().iterator();
             while (its.hasNext()) {
@@ -248,6 +256,7 @@ public class InteractionFloatViewHolder extends FloatViewHolder implements View.
         super.destroy();
         mAccepts.clear();
         mResults.clear();
+        mLogger.delete(0,mLogger.length());
     }
 
     @Override

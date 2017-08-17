@@ -127,10 +127,14 @@ public class HandlerInput extends HookHandler {
                 mEditText = edit;
             }
         }
-        if (mRecordTemp != null && mRecordHeader == null) {
-            mRecordHeader = mRecordTemp;
+        if (mRecordTemp != null) {
+            if (mRecordHeader == null) {
+                mRecordHeader = mRecordTemp;
+            } else {
+                mRecordTemp.recycle();
+            }
+            mRecordTemp = null;
         }
-        mRecordTemp = null;
         if (mRecordHeader != null) {
             if ((oldFocusView instanceof EditText) || (focusView == null && oldFocusView == mRootView)) {
                 InputRecord header = mRecordHeader;
