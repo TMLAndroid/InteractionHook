@@ -56,7 +56,7 @@ public class HandlerInput extends HookHandler {
 
         @Override
         public void onTextChanged(CharSequence s, int start, int before, int count) {
-            if (before == 0 || count == 0) {
+            if (mEditText!=null&&(before == 0 || count == 0)) {
                 int added = before == 0 ? count : -before;
                 long time = System.currentTimeMillis();
                 if (before > 1 && (s == null || s.length() == 0)) {
@@ -73,7 +73,7 @@ public class HandlerInput extends HookHandler {
                     }
                     return;
                 }
-                if (mRecordHeader == null && mRecordPointer == null) {
+                if (mRecordHeader == null || mRecordPointer == null) {
                     mRecordPointer = mRecordHeader = InputRecord.obtain(mEditText, time);
                 } else {
                     if (mEditText != mRecordPointer.getTargetView() || !mRecordPointer.support(time)) {
@@ -127,20 +127,20 @@ public class HandlerInput extends HookHandler {
                 mEditText = edit;
             }
         }
+        InputRecord header = mRecordHeader == null ? mRecordTemp : mRecordHeader;
+        boolean recycleTemp = true;
+        if (header != null) {
+            mRecordHeader = mRecordPointer = null;
+            if ((oldFocusView instanceof EditText) || (focusView == null && oldFocusView == mRootView)) {
+                recycleTemp = mRecordTemp != header;
+                handleInputRecordAfterUnfocused(prevEdit, header);
+            }
+        }
         if (mRecordTemp != null) {
-            if (mRecordHeader == null) {
-                mRecordHeader = mRecordTemp;
-            } else {
+            if (recycleTemp) {
                 mRecordTemp.recycle();
             }
             mRecordTemp = null;
-        }
-        if (mRecordHeader != null) {
-            if ((oldFocusView instanceof EditText) || (focusView == null && oldFocusView == mRootView)) {
-                InputRecord header = mRecordHeader;
-                mRecordHeader = mRecordPointer = null;
-                handleInputRecordAfterUnfocused(prevEdit, header);
-            }
         }
     }
 

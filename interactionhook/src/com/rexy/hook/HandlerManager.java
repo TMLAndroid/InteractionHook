@@ -92,6 +92,8 @@ public class HandlerManager {
 
     private IHandleListener mHandleListener;
 
+    private boolean mTouchTracking;
+
     /**
      * create a hook instance for monitor user interaction
      *
@@ -263,13 +265,21 @@ public class HandlerManager {
         boolean intercept = false;
         if (mHandlerPreventClick != null || InteractionConfig.isHandleAccess) {
             int action = ev.getActionMasked();
-            mTouchTracker.onTouch(ev, action);
-            if (MotionEvent.ACTION_DOWN == action) {
-                dispatchHandle(mHandlerProxyClick);
-                intercept = dispatchHandle(mHandlerPreventClick);
-            } else {
-                if ((MotionEvent.ACTION_UP == action || MotionEvent.ACTION_CANCEL == action)) {
-                    dispatchHandle(mHandlerGesture);
+            boolean actionDown = MotionEvent.ACTION_DOWN == action;
+            //prevent the user have touched down and not leave
+            // while the condition (mHandlerPreventClick != null || InteractionConfig.isHandleAccess) is false,
+            //and suddenly the condition changed to true ,in this case the mTouchRecord in mTouchTracker would be null.
+            if (mTouchTracking || actionDown) {
+                mTouchTracker.onTouch(ev, action);
+                if (actionDown) {
+                    mTouchTracking = true;
+                    dispatchHandle(mHandlerProxyClick);
+                    intercept = dispatchHandle(mHandlerPreventClick);
+                } else {
+                    if ((MotionEvent.ACTION_UP == action || MotionEvent.ACTION_CANCEL == action)) {
+                        mTouchTracking = false;
+                        dispatchHandle(mHandlerGesture);
+                    }
                 }
             }
         }
@@ -285,6 +295,7 @@ public class HandlerManager {
         mHandlerPreventClick = dispatchDestroy(mHandlerPreventClick);
         mHandlerGesture = dispatchDestroy(mHandlerGesture);
         mHandlerInput = dispatchDestroy(mHandlerInput);
+        mHandlerFocus = dispatchDestroy(mHandlerFocus);
         if (mTouchTracker != null) {
             mTouchTracker.destroy();
             mTouchTracker = null;
