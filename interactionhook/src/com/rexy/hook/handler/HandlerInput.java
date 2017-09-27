@@ -1,17 +1,24 @@
 package com.rexy.hook.handler;
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.provider.Settings;
 import android.text.Editable;
+import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.SparseIntArray;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.view.inputmethod.InputMethodInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 
 import com.rexy.hook.HandlerManager;
 import com.rexy.hook.record.InputRecord;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -56,7 +63,7 @@ public class HandlerInput extends HookHandler {
 
         @Override
         public void onTextChanged(CharSequence s, int start, int before, int count) {
-            if (mEditText!=null&&(before == 0 || count == 0)) {
+            if (mEditText != null && (before == 0 || count == 0)) {
                 int added = before == 0 ? count : -before;
                 long time = System.currentTimeMillis();
                 if (before > 1 && (s == null || s.length() == 0)) {
@@ -188,8 +195,51 @@ public class HandlerInput extends HookHandler {
                 result.mText = header.getText();
                 header = header.recycle();
             }
+            analyzeInputTypeAndMethod(edit, result);
             reportResult(result);
         }
+    }
+
+    private void analyzeInputTypeAndMethod(EditText edit, ResultInput result) {
+        int inputType = edit == null ? 0 : edit.getInputType();
+        int klass = inputType & InputType.TYPE_MASK_CLASS;
+        int variation = inputType & InputType.TYPE_MASK_VARIATION;
+        result.mInputType = analyzeInputType(klass, variation);
+
+        Context context = mHandlerManager == null ? null : mHandlerManager.getActivity();
+        if (context == null && edit != null) {
+            context = edit.getContext();
+        }
+        if (context != null) {
+            InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
+            result.mInputMethod = analyzeInputMethod(context, imm);
+        }
+    }
+
+    private String analyzeInputMethod(Context context, InputMethodManager imm) {
+        StringBuilder sb = new StringBuilder();
+        String defaultInputMethod = Settings.Secure.getString(
+                context.getContentResolver(),
+                Settings.Secure.DEFAULT_INPUT_METHOD);
+        PackageManager pm = context.getPackageManager();
+        List<InputMethodInfo> methodList = imm.getEnabledInputMethodList();
+        for (InputMethodInfo mi : methodList) {
+            CharSequence name = mi.loadLabel(pm);
+            sb.append(name).append(",");
+        }
+        return sb.toString();
+    }
+
+    private String analyzeInputType(int klass, int variation) {
+        StringBuilder sb = new StringBuilder();
+        if (klass == InputType.TYPE_CLASS_TEXT) {
+
+        }
+
+        if (variation == InputType.TYPE_TEXT_VARIATION_URI) {
+
+        }
+        return sb.toString();
     }
 
     private long analyzeInputResult(long lastTime, long refer, SparseIntArray array, ResultInput result) {
@@ -265,6 +315,16 @@ public class HandlerInput extends HookHandler {
          * mValidTimeCount/mValidTimeCost will be the average input speed .
          */
         private int mValidTimeCount;
+
+        /**
+         * the inputType of EditText
+         */
+        private String mInputType;
+
+        /**
+         * inputMethod name
+         */
+        private String mInputMethod;
 
 
         private ResultInput(View target, String tag, long startTime) {
