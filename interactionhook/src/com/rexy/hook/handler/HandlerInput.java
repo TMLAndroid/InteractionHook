@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.provider.Settings;
 import android.text.Editable;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.SparseIntArray;
 import android.view.View;
@@ -121,7 +122,7 @@ public class HandlerInput extends HookHandler {
     /**
      * call when the focus view changed in this window
      *
-     * @param focusView    new focus View
+     * @param focusView new focus View
      * @param oldFocusView old focus View may be null
      */
     private void onFocusViewChanged(View focusView, View oldFocusView) {
@@ -216,18 +217,24 @@ public class HandlerInput extends HookHandler {
         }
     }
 
-    private String analyzeInputMethod(Context context, InputMethodManager imm) {
-        StringBuilder sb = new StringBuilder();
-        String defaultInputMethod = Settings.Secure.getString(
-                context.getContentResolver(),
-                Settings.Secure.DEFAULT_INPUT_METHOD);
-        PackageManager pm = context.getPackageManager();
-        List<InputMethodInfo> methodList = imm.getEnabledInputMethodList();
-        for (InputMethodInfo mi : methodList) {
-            CharSequence name = mi.loadLabel(pm);
-            sb.append(name).append(",");
+    private CharSequence analyzeInputMethod(Context context, InputMethodManager imm) {
+        //com.iflytek.inputmethod/.FlyIME
+        String defInputMethodId = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
+        if (!TextUtils.isEmpty(defInputMethodId)) {
+            InputMethodInfo defaultInputMethod = null;
+            List<InputMethodInfo> methodList = imm.getEnabledInputMethodList();
+            for (InputMethodInfo mi : methodList) {
+                if (defInputMethodId.equals(mi.getId())) {
+                    defaultInputMethod = mi;
+                    break;
+                }
+            }
+            if (defaultInputMethod != null) {
+                PackageManager pm = context.getPackageManager();
+                return defaultInputMethod.loadLabel(pm);
+            }
         }
-        return sb.toString();
+        return null;
     }
 
     private String analyzeInputType(int klass, int variation) {
@@ -319,12 +326,12 @@ public class HandlerInput extends HookHandler {
         /**
          * the inputType of EditText
          */
-        private String mInputType;
+        private CharSequence mInputType;
 
         /**
          * inputMethod name
          */
-        private String mInputMethod;
+        private CharSequence mInputMethod;
 
 
         private ResultInput(View target, String tag, long startTime) {
