@@ -12,6 +12,7 @@ import android.util.SparseIntArray;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
@@ -172,7 +173,6 @@ public class HandlerInput extends HookHandler {
         return false;
     }
 
-
     private void handleInputRecordAfterUnfocused(EditText edit, InputRecord header) {
         while (header != null && header.getTargetView() != edit) {
             header = header.recycle();
@@ -205,7 +205,7 @@ public class HandlerInput extends HookHandler {
         int inputType = edit == null ? 0 : edit.getInputType();
         int klass = inputType & InputType.TYPE_MASK_CLASS;
         int variation = inputType & InputType.TYPE_MASK_VARIATION;
-        result.mInputType = analyzeInputType(klass, variation);
+        result.mInputType = analyzeInputType(inputType,klass, variation);
 
         Context context = mHandlerManager == null ? null : mHandlerManager.getActivity();
         if (context == null && edit != null) {
@@ -218,8 +218,14 @@ public class HandlerInput extends HookHandler {
     }
 
     private CharSequence analyzeInputMethod(Context context, InputMethodManager imm) {
-        //com.iflytek.inputmethod/.FlyIME
-        String defInputMethodId = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
+        CharSequence inputMethodName = null;
+        String defInputMethodId = null;
+        try {
+            //com.iflytek.inputmethod/.FlyIME   may throw SecurityException
+            defInputMethodId = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         if (!TextUtils.isEmpty(defInputMethodId)) {
             InputMethodInfo defaultInputMethod = null;
             List<InputMethodInfo> methodList = imm.getEnabledInputMethodList();
@@ -231,22 +237,54 @@ public class HandlerInput extends HookHandler {
             }
             if (defaultInputMethod != null) {
                 PackageManager pm = context.getPackageManager();
-                return defaultInputMethod.loadLabel(pm);
+                inputMethodName = defaultInputMethod.loadLabel(pm);
+            }
+            if (TextUtils.isEmpty(inputMethodName)) {
+                int pos = defInputMethodId.lastIndexOf('.');
+                if (pos == -1) pos = defInputMethodId.lastIndexOf('/');
+                inputMethodName = pos == -1 ? defInputMethodId : defInputMethodId.substring(pos + 1);
             }
         }
-        return null;
+        return inputMethodName;
     }
 
-    private String analyzeInputType(int klass, int variation) {
+    private CharSequence analyzeInputType(int flag,int klass, int variation) {
         StringBuilder sb = new StringBuilder();
-        if (klass == InputType.TYPE_CLASS_TEXT) {
-
+        switch (klass) {
+            case InputType.TYPE_CLASS_TEXT:  sb.append("CLASS_TEXT"); break;
+            case InputType.TYPE_CLASS_PHONE: sb.append("CLASS_PHONE"); break;
+            case InputType.TYPE_CLASS_DATETIME:  sb.append("CLASS_DATETIME"); break;
+            case InputType.TYPE_CLASS_NUMBER:
+                if(EditorInfo.TYPE_NUMBER_FLAG_SIGNED==(flag&EditorInfo.TYPE_NUMBER_FLAG_SIGNED)){
+                    sb.append("CLASS_NUMBER_SIGNED");
+                }else if(EditorInfo.TYPE_NUMBER_FLAG_DECIMAL==(flag&EditorInfo.TYPE_NUMBER_FLAG_DECIMAL)){
+                    sb.append("CLASS_NUMBER_DECIMAL");
+                }else {
+                    sb.append("CLASS_NUMBER");
+                }
+                break;
+            default: sb.append("CLASS_DEFAULT"); break;
         }
-
-        if (variation == InputType.TYPE_TEXT_VARIATION_URI) {
-
+        sb.append('&');
+        switch (variation) {
+            case InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS:  sb.append("VARIATION_EMAIL_ADDRESS"); break;
+            case InputType.TYPE_TEXT_VARIATION_EMAIL_SUBJECT:  sb.append("VARIATION_EMAIL_SUBJECT"); break;
+            case InputType.TYPE_TEXT_VARIATION_FILTER:  sb.append("VARIATION_FILTER"); break;
+            case InputType.TYPE_TEXT_VARIATION_LONG_MESSAGE:  sb.append("VARIATION_LONG_MESSAGE"); break;
+            case InputType.TYPE_TEXT_VARIATION_NORMAL:  sb.append("VARIATION_NORMAL"); break;
+            case InputType.TYPE_TEXT_VARIATION_PASSWORD:  sb.append("VARIATION_PASSWORD"); break;
+            case InputType.TYPE_TEXT_VARIATION_PERSON_NAME:  sb.append("VARIATION_PERSON_NAME"); break;
+            case InputType.TYPE_TEXT_VARIATION_PHONETIC:  sb.append("VARIATION_PHONETIC"); break;
+            case InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS:  sb.append("VARIATION_POSTAL_ADDRESS"); break;
+            case InputType.TYPE_TEXT_VARIATION_SHORT_MESSAGE:  sb.append("VARIATION_SHORT_MESSAGE"); break;
+            case InputType.TYPE_TEXT_VARIATION_URI:  sb.append("VARIATION_URI"); break;
+            case InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD:  sb.append("VARIATION_VISIBLE_PASSWORD"); break;
+            case InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT:  sb.append("VARIATION_WEB_EDIT_TEXT"); break;
+            case InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS:  sb.append("VARIATION_WEB_EMAIL_ADDRESS"); break;
+            case InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD:  sb.append("VARIATION_WEB_PASSWORD"); break;
+            default: sb.append("VARIATION_DEFAULT"); break;
         }
-        return sb.toString();
+        return sb;
     }
 
     private long analyzeInputResult(long lastTime, long refer, SparseIntArray array, ResultInput result) {
@@ -348,6 +386,14 @@ public class HandlerInput extends HookHandler {
             return mText;
         }
 
+        public CharSequence getInputType(){
+            return mInputType;
+        }
+
+        public CharSequence getInputMethod(){
+            return mInputMethod;
+        }
+
         public long getStartTime() {
             return mStartTime;
         }
@@ -379,6 +425,8 @@ public class HandlerInput extends HookHandler {
             receiver.append("input=").append(getInputCount()).append(',');
             receiver.append("delete=").append(getDeleteCount()).append(',');
             receiver.append("speed=").append((int) getInputSpeed(60 * 1000)).append(',');
+            receiver.append("inputType=").append(getInputType()).append(',');
+            receiver.append("inputMethod=").append(getInputMethod()).append(',');
             receiver.append("startTime=").append(formatTime(getStartTime(), null)).append(',');
             receiver.append("time=").append(formatTime(getTimestamp(), null)).append(',');
             receiver.setCharAt(receiver.length() - 1, '}');
@@ -393,6 +441,8 @@ public class HandlerInput extends HookHandler {
             receiver.put("inputCount", getInputCount());
             receiver.put("deleteCount", getDeleteCount());
             receiver.put("inputSpeed", getInputSpeed(60 * 1000));
+            receiver.put("inputType",getInputType());
+            receiver.put("inputMethod",getInputMethod());
         }
 
         @Override
