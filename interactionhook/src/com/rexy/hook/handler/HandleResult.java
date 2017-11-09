@@ -119,9 +119,12 @@ public abstract class HandleResult implements IHandleResult {
             int id = target.getId();
             Resources res = (id == View.NO_ID || target.getContext() == null) ? null : target.getContext().getResources();
             if (res != null) {
-                String viewIdName = res.getResourceEntryName(id);
+                try {
+                    String viewIdName = res.getResourceEntryName(id);
+                    receiver.put("viewIdName", viewIdName);
+                } catch (Throwable ignore) {
+                }
                 String viewIdValue = "0x" + Integer.toHexString(id);
-                receiver.put("viewIdName", viewIdName);
                 receiver.put("viewId", viewIdValue);
             }
         }
@@ -152,10 +155,13 @@ public abstract class HandleResult implements IHandleResult {
             int id = view.getId();
             Resources res = (id == View.NO_ID || view.getContext() == null) ? null : view.getContext().getResources();
             if (res != null) {
-                String entryName = res.getResourceEntryName(id);
                 sb.append('[');
-                if (entryName != null) {
-                    sb.append(entryName).append("#id/");
+                try {
+                    String entryName = res.getResourceEntryName(id);
+                    if (entryName != null) {
+                        sb.append(entryName).append("#id/");
+                    }
+                } catch (Throwable ignore) {
                 }
                 sb.append(Integer.toHexString(id));
                 sb.append(']');
