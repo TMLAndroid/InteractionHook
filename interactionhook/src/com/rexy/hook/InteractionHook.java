@@ -52,7 +52,7 @@ public abstract class InteractionHook {
 
         @Override
         public void onActivityDestroyed(Activity activity) {
-            onDestroy(activity);
+            detachHandlerManager(activity);
         }
     };
     private static InteractionConfig sConfig;
@@ -116,14 +116,6 @@ public abstract class InteractionHook {
     public static <T extends IHookHandler> T getHandler(Activity activity, Class<T> cls) {
         HandlerManager handlerManager = getHandlerManager(activity);
         return handlerManager == null ? null : handlerManager.getHandler(cls);
-    }
-
-    public static void onCreate(Activity activity) {
-        attachHandlerManager(activity);
-    }
-
-    public static void onDestroy(Activity activity) {
-        detachHandlerManager(activity);
     }
 
     private static void attachHandlerManager(Activity activity) {
