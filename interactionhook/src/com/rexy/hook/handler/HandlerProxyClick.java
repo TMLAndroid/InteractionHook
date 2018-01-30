@@ -223,6 +223,7 @@ public class HandlerProxyClick extends HookHandler {
         private int mClickY;
         private int mDataPosition = -1;
         private long mDownTime;
+        private int mClickedViewId;
 
         private ResultProxyClick(View target, String tag, float clickX, float clickY, long downTime, int dataPosition) {
             super(target, tag);
@@ -230,6 +231,7 @@ public class HandlerProxyClick extends HookHandler {
             mClickY = (int) clickY;
             mDownTime = downTime;
             mDataPosition = dataPosition;
+            mClickedViewId = System.identityHashCode(target);
         }
 
         /**
@@ -257,6 +259,10 @@ public class HandlerProxyClick extends HookHandler {
             return mDataPosition;
         }
 
+        public int getClickedViewId() {
+            return mClickedViewId;
+        }
+
         /**
          * get click touch up timestamp;
          */
@@ -277,6 +283,7 @@ public class HandlerProxyClick extends HookHandler {
         @Override
         protected void dumpResultImpl(Map<String, Object> receiver) {
             super.dumpResultImpl(receiver);
+            receiver.put("clickId", getClickedViewId());
             receiver.put("dataPosition", getDataPosition());
             receiver.put("clickX", getClickX());
             receiver.put("clickY", getClickY());
