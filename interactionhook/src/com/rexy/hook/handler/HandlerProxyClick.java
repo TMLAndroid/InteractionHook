@@ -234,6 +234,14 @@ public class HandlerProxyClick extends HookHandler {
             mClickedViewId = System.identityHashCode(target);
         }
 
+        @Override
+        public boolean equals(Object obj) {
+            if (obj != null && obj instanceof ResultProxyClick) {
+                return mClickedViewId == ((ResultProxyClick) obj).getClickedViewId();
+            }
+            return false;
+        }
+
         /**
          * get maybe click x in window
          */
