@@ -70,7 +70,7 @@ uploadArchives {
             url 'http://nexus.kedouinc.net:8081/nexus/content/repositories/android/'//仓库地址
             groupId "com.tuotuo.solo"
             artifactId "monitor"
-            version "1.0.0"
+            version "1.0.2"
         }
     }
 }
