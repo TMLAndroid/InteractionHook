@@ -16,6 +16,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -335,6 +336,29 @@ public class HandlerProxyClick extends HookHandler {
                 }
                 //receiver.put("eventHandler", "");
             }
+        }
+
+        public String dumpStringResult(){
+            HashMap resultMap = new HashMap();
+            super.dumpResultImpl(resultMap);
+            View target = getTargetView();
+            if (target != null) {
+                StringBuilder sb = new StringBuilder();
+                List<TextView> lables = new ArrayList(8);
+                findAndFillTextView(target, lables);
+                Comparator<TextView> comparator = new Comparator<TextView>() {
+                    @Override
+                    public int compare(TextView a, TextView b) {
+                        return (int) (b.getTextSize() - a.getTextSize());
+                    }
+                };
+                sb.delete(0, sb.length());
+                dumpText(lables, comparator, sb);
+                if (sb.length() > 0) {
+                    resultMap.put("viewText", sb.deleteCharAt(sb.length() - 1).toString());
+                }
+            }
+            return resultMap.toString();
         }
 
         private void dumpText(List<TextView> textViews, Comparator<TextView> comparator, StringBuilder sb) {
