@@ -179,6 +179,7 @@ public class InteractionReporter implements IHandleListener {
                     log(params.toString());
                 }
             }
+            UtilClickApm.checkClickApm(result);
         }
         return false;
     }
